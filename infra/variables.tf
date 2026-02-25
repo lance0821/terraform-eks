@@ -37,3 +37,40 @@ variable "extra_tags" {
     error_message = "extra_tags placeholders are not allowed: set Owner and Team to real values (not \"Owner\"/\"Team\")."
   }
 }
+
+variable "vpc_cidr" {
+  type        = string
+  description = "CIDR block for the VPC."
+  validation {
+    condition     = can(cidrhost(var.vpc_cidr, 0))
+    error_message = "vpc_cidr must be a valid IPv4 CIDR block."
+  }
+}
+
+variable "az_count" {
+  type        = number
+  description = "Number of AZs to use."
+  default     = 3
+  validation {
+    condition     = var.az_count >= 2 && var.az_count <= 4
+    error_message = "az_count must be between 2 and 4."
+  }
+}
+
+variable "kubernetes_version" {
+  type        = string
+  description = "EKS Kubernetes version."
+  default     = "1.31"
+}
+
+variable "eks_managed_node_groups" {
+  type        = any
+  description = "Managed node group map passed to EKS module."
+  default     = {}
+}
+
+variable "eks_addons" {
+  type        = any
+  description = "EKS addons map passed to EKS module."
+  default     = {}
+}

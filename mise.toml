@@ -19,7 +19,6 @@ TF_DIR = "infra"
 
 # Helpful defaults
 TF_IN_AUTOMATION = "true"
-TF_PLUGIN_CACHE_DIR = ".terraform.d/plugin-cache"
 
 # Optional defaults (I’d keep REGION, but avoid forcing PROFILE in repo)
 AWS_REGION = "us-east-1"
@@ -32,7 +31,7 @@ TF_STATE_ENV = "dev"
 description = "Initializes Terraform"
 run = """
 mkdir -p .terraform.d/plugin-cache
-terraform -chdir=${TF_DIR} init -input=false \
+TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache terraform -chdir=${TF_DIR} init -input=false \
 	-reconfigure \
 	-backend-config=bucket=${TF_STATE_BUCKET} \
 	-backend-config=key=${TF_STATE_PREFIX}/${TF_STATE_ENV}/terraform.tfstate \
@@ -50,13 +49,12 @@ description = "Checks Terraform formatting (no changes)"
 run = "terraform -chdir=${TF_DIR} fmt -check -recursive"
 
 [tasks."terraform:validate"]
-description = "Validates Terraform configuration"
-depends = ["terraform:init"]
+description = "Validates Terraform configuration (requires init to have been run previously)"
 run = "terraform -chdir=${TF_DIR} validate"
 
 [tasks."terraform:validate-ci"]
 description = "CI-safe validation (no remote backend init)"
-run = "mkdir -p .terraform.d/plugin-cache && TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false && TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} validate"
+run = "mkdir -p .terraform.d/plugin-cache && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} validate"
 
 [tasks."terraform:plan"]
 description = "Generates and saves an execution plan"
