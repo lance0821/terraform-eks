@@ -39,3 +39,24 @@ module "eks" {
   addons                                   = var.eks_addons
   tags                                     = local.tags
 }
+
+module "eks_addons" {
+  source = "../modules/eks-addons"
+
+  cluster_name      = module.eks.cluster_name
+  cluster_endpoint  = module.eks.cluster_endpoint
+  cluster_version   = module.eks.cluster_version
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  region            = var.region
+  vpc_id            = module.vpc.vpc_id
+
+  enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
+  enable_metrics_server               = var.enable_metrics_server
+  enable_external_dns                 = var.enable_external_dns
+
+  aws_load_balancer_controller = var.eks_addons_aws_load_balancer_controller
+  metrics_server               = var.eks_addons_metrics_server
+  external_dns                 = var.eks_addons_external_dns
+
+  tags = local.tags
+}

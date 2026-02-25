@@ -74,3 +74,39 @@ variable "eks_addons" {
   description = "EKS addons map passed to EKS module."
   default     = {}
 }
+
+variable "enable_aws_load_balancer_controller" {
+  type        = bool
+  description = "Enable AWS Load Balancer Controller via eks-addons module."
+  default     = true
+}
+
+variable "enable_metrics_server" {
+  type        = bool
+  description = "Enable metrics-server via eks-addons module."
+  default     = true
+}
+
+variable "enable_external_dns" {
+  type        = bool
+  description = "Enable external-dns via eks-addons module."
+  default     = false
+}
+
+variable "eks_addons_aws_load_balancer_controller" {
+  type        = any
+  description = "Configuration map passed to aws_load_balancer_controller in eks-addons module."
+  default     = {}
+}
+
+variable "eks_addons_metrics_server" {
+  type        = any
+  description = "Configuration map passed to metrics_server in eks-addons module."
+  default     = {}
+}
+
+variable "eks_addons_external_dns" {
+  type        = any
+  description = "Configuration map passed to external_dns in eks-addons module."
+  default     = {}
+}

@@ -26,3 +26,7 @@ eks_addons = {
   vpc-cni            = {}
   aws-ebs-csi-driver = {}
 }
+
+enable_aws_load_balancer_controller = true
+enable_metrics_server               = true
+enable_external_dns                 = false
