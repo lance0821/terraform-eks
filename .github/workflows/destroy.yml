@@ -1,0 +1,82 @@
+name: Destroy (Terraform)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      confirm:
+        description: "Type DESTROY (or DESTROY-PROD for prod)"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: destroy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  destroy:
+    if: ${{ vars.ENABLE_DEPLOY == 'true' && github.ref == 'refs/heads/main' && ((inputs.environment != 'prod' && inputs.confirm == 'DESTROY') || (inputs.environment == 'prod' && inputs.confirm == 'DESTROY-PROD')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: terraform-${{ inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: "true"
+      AWS_REGION: us-east-1
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+      TF_STATE_PREFIX: ${{ vars.TF_STATE_PREFIX || github.event.repository.name }}
+      TF_STATE_KEY: ${{ format('{0}/{1}/terraform.tfstate', vars.TF_STATE_PREFIX || github.event.repository.name, inputs.environment) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Harden runner (audit)
+        uses: step-security/harden-runner@v2.15.0
+        with:
+          egress-policy: audit
+
+      - name: Setup mise
+        uses: jdx/mise-action@v3.6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          set -euo pipefail
+          : "${TF_STATE_BUCKET:?Set TF_STATE_BUCKET in repo or environment variables}"
+          mkdir -p .terraform.d/plugin-cache
+          BACKEND_ARGS=(
+            "-backend-config=bucket=${TF_STATE_BUCKET}"
+            "-backend-config=key=${TF_STATE_KEY}"
+            "-backend-config=region=${AWS_REGION}"
+            "-backend-config=encrypt=true"
+            "-backend-config=use_lockfile=true"
+          )
+          terraform -chdir=infra init -input=false -no-color "${BACKEND_ARGS[@]}"
+
+      - name: Terraform Plan (destroy)
+        run: terraform -chdir=infra plan -destroy -input=false -no-color
+
+      - name: Terraform Destroy
+        run: terraform -chdir=infra destroy -input=false -auto-approve -no-color

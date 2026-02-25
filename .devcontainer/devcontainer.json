@@ -1,0 +1,33 @@
+{
+  "name": "terraform-template",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {}
+  },
+
+  "postCreateCommand": "bash .devcontainer/scripts/devcontainer-postcreate.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "hashicorp.terraform",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "amazonwebservices.aws-toolkit-vscode",
+        "enkia.tokyo-night",
+        "github.vscode-github-actions",
+        "redhat.vscode-yaml",
+        "MS-SarifVSCode.sarif-viewer",
+        "tamasfe.even-better-toml",
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker",
+        "streetsidesoftware.code-spell-checker",
+        "4ops.terraform",
+        "gruntfuggly.todo-tree"
+      ],
+      "settings": {
+        "workbench.colorTheme": "Tokyo Night"
+      }
+    }
+  }
+}

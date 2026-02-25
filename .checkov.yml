@@ -1,0 +1,13 @@
+quiet: true
+framework:
+  - terraform
+download-external-modules: true
+
+# Best-practice suppression workflow:
+# 1) Prefer fixing findings over suppressing checks.
+# 2) If suppression is required, use specific IDs and document rationale in PR notes.
+# 3) Keep suppressions minimal and review/remove them regularly.
+#
+# Example (disabled by default):
+# skip-check:
+#   - CKV_AWS_20 # Example only: replace with a real ID and documented rationale.

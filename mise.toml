@@ -1,0 +1,140 @@
+[tools]
+terraform = "1.14.5"
+aws-cli = "2"
+tflint = "0.61.0"
+trivy = "0.69.1"
+gitleaks = "8.30.0"
+terraform-docs = "0.21.0"
+checkov = "3.2.500"
+pre-commit = "4"
+python = "3.12"
+uv = "latest"
+kubectl = "latest"
+
+[env]
+_.file = ".env"
+
+# Prefer TF_DIR so you can rename terraform/ -> infra/ later
+TF_DIR = "infra"
+
+# Helpful defaults
+TF_IN_AUTOMATION = "true"
+TF_PLUGIN_CACHE_DIR = ".terraform.d/plugin-cache"
+
+# Optional defaults (I’d keep REGION, but avoid forcing PROFILE in repo)
+AWS_REGION = "us-east-1"
+TF_STATE_BUCKET = "tfstate-llewandowski"
+TF_STATE_PREFIX = "terraform-labs"
+TF_STATE_ENV = "dev"
+# AWS_PROFILE = "dev"
+
+[tasks."terraform:init"]
+description = "Initializes Terraform"
+run = """
+mkdir -p .terraform.d/plugin-cache
+terraform -chdir=${TF_DIR} init -input=false \
+	-reconfigure \
+	-backend-config=bucket=${TF_STATE_BUCKET} \
+	-backend-config=key=${TF_STATE_PREFIX}/${TF_STATE_ENV}/terraform.tfstate \
+	-backend-config=region=${AWS_REGION} \
+	-backend-config=encrypt=true \
+	-backend-config=use_lockfile=true
+"""
+
+[tasks."terraform:fmt"]
+description = "Formats Terraform files (writes changes)"
+run = "terraform -chdir=${TF_DIR} fmt -recursive"
+
+[tasks."terraform:fmt-check"]
+description = "Checks Terraform formatting (no changes)"
+run = "terraform -chdir=${TF_DIR} fmt -check -recursive"
+
+[tasks."terraform:validate"]
+description = "Validates Terraform configuration"
+depends = ["terraform:init"]
+run = "terraform -chdir=${TF_DIR} validate"
+
+[tasks."terraform:validate-ci"]
+description = "CI-safe validation (no remote backend init)"
+run = "mkdir -p .terraform.d/plugin-cache && TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false && TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} validate"
+
+[tasks."terraform:plan"]
+description = "Generates and saves an execution plan"
+depends = ["terraform:init"]
+run = "terraform -chdir=${TF_DIR} plan -input=false -out=tfplan"
+
+[tasks."terraform:apply"]
+description = "Applies the saved plan"
+depends = ["terraform:plan"]
+run = "terraform -chdir=${TF_DIR} apply -input=false tfplan"
+
+[tasks."terraform:destroy"]
+description = "Destroy Terraform-managed infrastructure"
+depends = ["terraform:init"]
+run = "terraform -chdir=${TF_DIR} destroy -input=false"
+
+[tasks."tflint:init"]
+description = "Initializes TFLint plugins"
+run = "tflint --init --config=.tflint.hcl"
+
+[tasks."tflint:run"]
+description = "Runs TFLint against the project"
+depends = ["tflint:init"]
+run = "tflint --chdir=${TF_DIR} --config=../.tflint.hcl"
+
+[tasks."tflint:modules"]
+description = "Runs TFLint against Terraform modules (if modules/ exists)"
+depends = ["tflint:init"]
+run = "if [ ! -d modules ]; then exit 0; fi; for d in modules/*; do if [ -d \"$d\" ] && ls \"$d\"/*.tf >/dev/null 2>&1; then terraform -chdir=\"$d\" init -backend=false -input=false >/dev/null && tflint --chdir=\"$d\" --config=../../.tflint.hcl; fi; done"
+
+[tasks."trivy:iac"]
+description = "Runs Trivy IaC scan (Terraform misconfig)"
+run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci ${TF_DIR}"
+
+[tasks."trivy:sarif"]
+description = "Runs Trivy IaC scan and writes SARIF report"
+run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci --format sarif --output trivy.sarif ${TF_DIR}"
+
+[tasks."gitleaks:scan"]
+description = "Scans repo for secrets"
+run = "gitleaks detect --redact --no-git --config .gitleaks.toml"
+
+[tasks."checkov:scan"]
+description = "Runs Checkov scan against owned Terraform code (excludes vendored external modules)"
+run = "checkov --config-file .checkov.yml -d ${TF_DIR} --download-external-modules false"
+
+[tasks."checkov:sarif"]
+description = "Runs Checkov scan on owned code and writes SARIF report"
+run = "checkov --config-file .checkov.yml -d ${TF_DIR} --download-external-modules false -o sarif --output-file-path checkov.sarif"
+
+[tasks."checkov:scan-all"]
+description = "Advisory Checkov scan including downloaded external modules"
+run = "checkov --config-file .checkov.yml -d ${TF_DIR} --download-external-modules true"
+
+[tasks."checkov:sarif-all"]
+description = "Advisory Checkov SARIF including downloaded external modules"
+run = "checkov --config-file .checkov.yml -d ${TF_DIR} --download-external-modules true -o sarif --output-file-path checkov-all.sarif || true"
+
+[tasks."check"]
+description = "Project checks (non-destructive)"
+depends = ["terraform:fmt-check", "terraform:validate", "tflint:run", "trivy:iac", "checkov:scan", "gitleaks:scan"]
+
+[tasks."check:ci"]
+description = "CI checks (backend-safe validation + SARIF output)"
+depends = ["terraform:fmt-check", "terraform:validate-ci", "tflint:run", "tflint:modules", "trivy:sarif", "checkov:sarif", "gitleaks:scan"]
+
+[tasks."aws:whoami"]
+description = "Show active AWS identity"
+run = "aws sts get-caller-identity"
+
+[tasks."pre-commit:install"]
+description = "Install pre-commit git hooks"
+run = "bash .devcontainer/scripts/install-git-hooks.sh"
+
+[tasks."pre-commit:run"]
+description = "Run all pre-commit hooks"
+run = "pre-commit run --all-files"
+
+[tasks."uv:venv"]
+description = "Create local Python virtual environment (.venv)"
+run = "uv venv .venv"

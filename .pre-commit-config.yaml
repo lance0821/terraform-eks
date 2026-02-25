@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-merge-conflict
+
+  - repo: local
+    hooks:
+      - id: terraform-fmt-check
+        name: terraform fmt check
+        entry: terraform -chdir=infra fmt -check -recursive
+        language: system
+        pass_filenames: false
+
+      - id: tflint
+        name: tflint
+        entry: bash -lc 'tflint --init --config=.tflint.hcl >/dev/null && tflint --chdir=infra --config=../.tflint.hcl'
+        language: system
+        pass_filenames: false
+
+      - id: gitleaks
+        name: gitleaks
+        entry: gitleaks detect --redact --no-git --config .gitleaks.toml
+        language: system
+        pass_filenames: false
