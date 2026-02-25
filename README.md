@@ -1,4 +1,4 @@
-## terraform-template
+## terraform-eks
 
 ### Prerequisites
 
@@ -14,12 +14,32 @@ Create local AWS env values (do not commit `.env`):
 cp .env.example .env
 ```
 
+Set values in `.env` for your account/workspace:
+
+- `AWS_PROFILE`
+- `AWS_REGION`
+- `TF_STATE_BUCKET`
+- `TF_STATE_PREFIX`
+- `TF_STATE_ENV`
+
 Authenticate with AWS SSO:
 
+Use device code flow in remote dev containers/Codespaces to avoid localhost callback issues.
+
 ```bash
-aws configure sso --profile dev
-aws sso login --profile dev
+aws configure sso --profile dev --use-device-code
+aws sso login --profile dev --use-device-code
 aws sts get-caller-identity --profile dev
+```
+
+Troubleshooting (Codespaces/dev container):
+
+- If login tries to redirect to `127.0.0.1`, re-run with `--use-device-code`.
+- If cached SSO/token data is stale, clear cache and sign in again:
+
+```bash
+rm -rf ~/.aws/sso/cache ~/.aws/cli/cache
+aws sso login --profile dev --use-device-code
 ```
 
 `mise.toml` loads `.env` via `_.file = ".env"`, so tasks pick up `AWS_PROFILE`/`AWS_REGION` automatically.
@@ -77,6 +97,8 @@ source .venv/bin/activate
 ### AWS commands
 
 If you have not set up your local AWS environment yet, follow `Codespaces / AWS env setup` above first.
+
+For remote containers/Codespaces, use `--use-device-code` for SSO login and see the troubleshooting note above if auth fails.
 
 Verify active AWS credentials/profile with the task in `mise.toml`:
 
@@ -151,7 +173,7 @@ State key path is set by prefix + workflow input environment:
 - `<prefix>/staging/terraform.tfstate`
 - `<prefix>/prod/terraform.tfstate`
 
-Where `<prefix>` is `TF_STATE_PREFIX` if set, otherwise the GitHub repo name (for example `terraform-template`).
+Where `<prefix>` is `TF_STATE_PREFIX` if set, otherwise the GitHub repo name (for example `terraform-eks`).
 
 For local `mise run terraform:init`:
 
