@@ -2,6 +2,10 @@ variable "region" {
   type        = string
   description = "AWS region for all resources."
   default     = "us-east-1"
+  validation {
+    condition     = can(regex("^[a-z]{2}(?:-[a-z]+)+-[0-9]+$", lower(trimspace(var.region))))
+    error_message = "region must look like a valid AWS region (for example us-east-1)."
+  }
 }
 
 variable "project_name" {
@@ -61,6 +65,10 @@ variable "kubernetes_version" {
   type        = string
   description = "EKS Kubernetes version."
   default     = "1.31"
+  validation {
+    condition     = can(regex("^1\\.[0-9]+$", trimspace(var.kubernetes_version)))
+    error_message = "kubernetes_version must be in major.minor format (for example 1.31)."
+  }
 }
 
 variable "enable_cluster_creator_admin_permissions" {
@@ -205,12 +213,20 @@ variable "efs_performance_mode" {
   type        = string
   description = "EFS performance mode."
   default     = "generalPurpose"
+  validation {
+    condition     = contains(["generalPurpose", "maxIO"], trimspace(var.efs_performance_mode))
+    error_message = "efs_performance_mode must be one of: generalPurpose, maxIO."
+  }
 }
 
 variable "efs_throughput_mode" {
   type        = string
   description = "EFS throughput mode."
   default     = "bursting"
+  validation {
+    condition     = contains(["bursting", "provisioned", "elastic"], lower(trimspace(var.efs_throughput_mode)))
+    error_message = "efs_throughput_mode must be one of: bursting, provisioned, elastic."
+  }
 }
 
 variable "efs_subnet_ids" {

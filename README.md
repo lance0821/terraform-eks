@@ -50,6 +50,8 @@ aws sts get-caller-identity --profile dev
 AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
 ```
 
+This `-backend=false` init is for provider/module initialization only (no remote state backend configuration).
+
 `mise.toml` loads `.env` via `_.file = ".env"`, so tasks pick up `AWS_PROFILE`/`AWS_REGION` automatically.
 
 ### One-time shell setup
@@ -144,12 +146,25 @@ mise run check
 mise run check:ci
 ```
 
-`check:ci` runs several tasks in parallel. The `tflint:modules` task initializes each module with an isolated `TF_DATA_DIR` under `.terraform-ci/tflint-modules/<module>` to avoid shared-state races during concurrent CI runs.
+`check:ci` runs several tasks in parallel. The `tflint:modules` task runs `terraform init` inside each module directory so TFLint can resolve module sources from that module's local `.terraform` state.
 
-If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit:
+If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit.
+
+For provider/module initialization only (no backend):
 
 ```bash
 AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
+```
+
+To initialize with the S3 backend (equivalent to `mise run terraform:init`), pass backend config explicitly:
+
+```bash
+AWS_PROFILE=dev terraform -chdir=infra init -reconfigure -upgrade \
+	-backend-config="bucket=tfstate-llewandowski" \
+	-backend-config="key=terraform-labs/dev/terraform.tfstate" \
+	-backend-config="region=us-east-1" \
+	-backend-config="encrypt=true" \
+	-backend-config="use_lockfile=true"
 ```
 
 Or export once per shell session:
