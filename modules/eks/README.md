@@ -31,6 +31,19 @@ module "eks" {
 
   enable_irsa                              = true
   enable_cluster_creator_admin_permissions = true
+  access_entries = {
+    platform_admin = {
+      principal_arn = "arn:aws:iam::123456789012:role/PlatformAdmin"
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
 
   eks_managed_node_groups = {
     default = {
@@ -66,6 +79,7 @@ module "eks" {
 | `endpoint_private_access` | `bool` | `true` | Whether the API server endpoint is privately accessible. |
 | `enable_irsa` | `bool` | `true` | Whether to enable IAM Roles for Service Accounts (IRSA). |
 | `enable_cluster_creator_admin_permissions` | `bool` | `true` | Whether cluster creator gets admin permissions. |
+| `access_entries` | `any` | `{}` | Map of EKS access entries for IAM principal access without direct `aws-auth` management. |
 | `eks_managed_node_groups` | `any` | `{}` | Managed node group definitions passed through to upstream module. |
 | `addons` | `any` | `{}` | EKS add-on definitions passed through to upstream module. |
 | `tags` | `map(string)` | `{}` | Tags applied to cluster resources. |

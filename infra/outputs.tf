@@ -93,3 +93,22 @@ output "addon_helm_releases" {
   description = "Generic Helm releases status map."
   value       = module.eks_addons.helm_releases
 }
+
+################################################################################
+# EFS
+################################################################################
+
+output "efs_file_system_id" {
+  description = "EFS file system ID (if created)."
+  value       = var.enable_efs_filesystem ? aws_efs_file_system.this[0].id : null
+}
+
+output "efs_security_group_id" {
+  description = "Security group ID attached to EFS mount targets (if created)."
+  value       = var.enable_efs_filesystem ? aws_security_group.efs[0].id : null
+}
+
+output "efs_mount_target_ids" {
+  description = "Map of subnet ID to EFS mount target ID (if created)."
+  value       = var.enable_efs_filesystem ? { for subnet_id, mt in aws_efs_mount_target.this : subnet_id => mt.id } : {}
+}

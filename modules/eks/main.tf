@@ -13,6 +13,7 @@ module "this" {
 
   enable_irsa                              = var.enable_irsa
   enable_cluster_creator_admin_permissions = var.enable_cluster_creator_admin_permissions
+  access_entries                           = var.access_entries
 
   eks_managed_node_groups = var.eks_managed_node_groups
   addons                  = var.addons

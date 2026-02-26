@@ -63,6 +63,18 @@ variable "kubernetes_version" {
   default     = "1.31"
 }
 
+variable "enable_cluster_creator_admin_permissions" {
+  type        = bool
+  description = "Whether the Terraform caller identity receives EKS cluster admin access."
+  default     = true
+}
+
+variable "eks_access_entries" {
+  type        = any
+  description = "Map of EKS access entries to grant IAM principals cluster or namespace-scoped access."
+  default     = {}
+}
+
 variable "eks_managed_node_groups" {
   type        = any
   description = "Managed node group map passed to EKS module."
@@ -181,4 +193,34 @@ variable "helm_releases" {
   type        = any
   description = "Map of Helm releases to install on the EKS cluster."
   default     = {}
+}
+
+variable "enable_efs_filesystem" {
+  type        = bool
+  description = "Create EFS filesystem and mount targets for EKS workloads."
+  default     = false
+}
+
+variable "efs_encrypted" {
+  type        = bool
+  description = "Enable encryption at rest for EFS filesystem."
+  default     = true
+}
+
+variable "efs_performance_mode" {
+  type        = string
+  description = "EFS performance mode."
+  default     = "generalPurpose"
+}
+
+variable "efs_throughput_mode" {
+  type        = string
+  description = "EFS throughput mode."
+  default     = "bursting"
+}
+
+variable "efs_subnet_ids" {
+  type        = list(string)
+  description = "Optional subnet IDs for EFS mount targets. If empty, uses VPC private subnets."
+  default     = []
 }

@@ -54,6 +54,12 @@ variable "enable_cluster_creator_admin_permissions" {
   default     = true
 }
 
+variable "access_entries" {
+  description = "Map of EKS access entries passed to the upstream module for IAM principal access management."
+  type        = any
+  default     = {}
+}
+
 variable "eks_managed_node_groups" {
   description = "Map of EKS managed node group definitions."
   type        = any

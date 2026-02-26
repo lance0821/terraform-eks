@@ -1,0 +1,14 @@
+serviceAccount:
+  create: true
+  name: fluent-bit
+
+opensearch:
+  enabled: true
+  host: search-example-domain.us-east-1.es.amazonaws.com # change to your OpenSearch endpoint (no https://)
+  port: 443
+  awsRegion: us-east-1 # change to your AWS region
+  index: fluent-bit
+  type: _doc
+  tls: true
+  suppressTypeName: true
+  logstashPrefix: fluent-bit

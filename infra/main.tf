@@ -34,7 +34,8 @@ module "eks" {
   subnet_ids         = module.vpc.private_subnets
 
   enable_irsa                              = true
-  enable_cluster_creator_admin_permissions = true
+  enable_cluster_creator_admin_permissions = var.enable_cluster_creator_admin_permissions
+  access_entries                           = var.eks_access_entries
   eks_managed_node_groups                  = var.eks_managed_node_groups
   addons                                   = var.eks_addons
   tags                                     = local.tags

@@ -25,10 +25,10 @@ output "release_metadata" {
 
 output "irsa_role_arn" {
   description = "IRSA IAM role ARN, if created."
-  value       = var.create && var.create_irsa_role ? module.irsa[0].iam_role_arn : null
+  value       = var.create && var.create_irsa_role ? module.irsa[0].arn : null
 }
 
 output "irsa_role_name" {
   description = "IRSA IAM role name, if created."
-  value       = var.create && var.create_irsa_role ? module.irsa[0].iam_role_name : null
+  value       = var.create && var.create_irsa_role ? module.irsa[0].name : null
 }

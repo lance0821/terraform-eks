@@ -1,0 +1,9 @@
+serviceAccount:
+  create: true
+  name: fluent-bit
+
+cloudWatch:
+  enabled: true
+  region: us-east-1 # change to your AWS region
+  logGroupName: /aws/eks/terraform-eks/cluster # change per environment
+  logStreamPrefix: fluent-bit-

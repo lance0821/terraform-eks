@@ -66,6 +66,19 @@ description = "Applies the saved plan"
 depends = ["terraform:plan"]
 run = "terraform -chdir=${TF_DIR} apply -input=false tfplan"
 
+[tasks."kubeconfig:update"]
+description = "Update local kubeconfig for the Terraform-managed EKS cluster"
+depends = ["terraform:init"]
+run = "aws eks update-kubeconfig --region ${AWS_REGION} --name \"$(terraform -chdir=${TF_DIR} output -raw cluster_name)\""
+
+[tasks."kubeconfig:whoami"]
+description = "Show current kube context and list nodes"
+run = "kubectl config current-context && kubectl get nodes"
+
+[tasks."kubeconfig:placement"]
+description = "Show pod -> node -> capacity type placement"
+run = "kubectl get pods -n default -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.nodeName}{\"\\n\"}{end}' | while read -r pod node; do cap=$(kubectl get node \"$node\" -o jsonpath='{.metadata.labels.eks\\.amazonaws\\.com/capacityType}'); echo \"$pod $node $cap\"; done"
+
 [tasks."terraform:destroy"]
 description = "Destroy Terraform-managed infrastructure"
 depends = ["terraform:init"]

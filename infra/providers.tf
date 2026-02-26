@@ -3,7 +3,8 @@ provider "aws" {
 }
 
 data "aws_eks_cluster" "this" {
-  name = module.eks.cluster_name
+  name       = module.eks.cluster_name
+  depends_on = [module.eks]
 }
 
 # exec plugin refreshes the token automatically during long applies,

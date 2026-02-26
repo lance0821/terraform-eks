@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "OpenSearchIndexWrite",
+      "Effect": "Allow",
+      "Action": [
+        "es:ESHttpGet",
+        "es:ESHttpPost",
+        "es:ESHttpPut"
+      ],
+      "Resource": "arn:aws:es:${REGION}:${ACCOUNT_ID}:domain/${DOMAIN_NAME}/*"
+    }
+  ]
+}

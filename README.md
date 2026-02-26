@@ -131,6 +131,9 @@ Run tasks defined in `mise.toml`:
 mise run terraform:init
 mise run terraform:plan
 mise run terraform:apply
+mise run kubeconfig:update
+mise run kubeconfig:whoami
+mise run kubeconfig:placement
 mise run terraform:destroy
 mise run terraform:validate
 mise run terraform:validate-ci
@@ -152,6 +155,241 @@ Or export once per shell session:
 ```bash
 export AWS_PROFILE=dev
 ```
+
+### Worker node cost optimization (Spot)
+
+`infra/terraform.tfvars` uses a mixed-capacity node group pattern by default:
+
+- `default`: small On-Demand baseline for core/critical workloads.
+- `spot`: diversified Spot node group for cost-efficient scale-out.
+
+The `spot` node group also includes:
+
+- label: `workload_tier=spot`
+- taint: `workload-tier=spot:NoSchedule`
+
+This keeps general workloads on On-Demand unless they explicitly opt into Spot scheduling.
+
+Example workload manifest (node selector + toleration):
+
+```bash
+kubectl apply -f examples/scheduling/deployment-spot-example.yaml
+```
+
+Critical workload example pinned to On-Demand nodes:
+
+```bash
+kubectl apply -f examples/scheduling/deployment-ondemand-example.yaml
+```
+
+See `examples/scheduling/README.md` for guidance on when to use each pattern and how to verify pod placement.
+
+That guide also includes a one-liner to print pod -> node -> capacity type for quick Spot vs On-Demand verification.
+
+Tune `min_size`, `desired_size`, `max_size`, and `instance_types` in `eks_managed_node_groups` to match your workload and interruption tolerance.
+
+### EKS access entries (team access)
+
+The cluster currently supports creator-admin access, but team access should be managed with EKS access entries instead of editing `aws-auth` directly.
+
+`infra/terraform.tfvars` includes:
+
+- `enable_cluster_creator_admin_permissions` (default `true`)
+- `eks_access_entries` (default `{}` with example block)
+
+To grant additional IAM role/user access:
+
+1. Add entries in `eks_access_entries` with `principal_arn` and `policy_associations`.
+2. Optionally set `enable_cluster_creator_admin_permissions = false` once team access entries are in place.
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Example (`cluster admin` + `namespace read-only`):
+
+```hcl
+eks_access_entries = {
+	admin_role = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/PlatformAdmin"
+		policy_associations = {
+			admin = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+				access_scope = {
+					type = "cluster"
+				}
+			}
+		}
+	}
+
+	readonly_dev_ns = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/AppTeamReadOnly"
+		policy_associations = {
+			view_dev = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+				access_scope = {
+					type       = "namespace"
+					namespaces = ["dev"]
+				}
+			}
+		}
+	}
+
+	readonly_staging_ns = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/AppTeamReadOnly"
+		policy_associations = {
+			view_staging = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+				access_scope = {
+					type       = "namespace"
+					namespaces = ["staging"]
+				}
+			}
+		}
+	}
+}
+```
+
+### External Secrets Operator (AWS Secrets Manager / SSM)
+
+Use `helm_releases` to deploy External Secrets Operator with IRSA.
+
+`infra/terraform.tfvars` includes an `external_secrets` example block (disabled by default with `create=false`).
+
+To enable it:
+
+1. Set `helm_releases.external_secrets.create = true` in `infra/terraform.tfvars`.
+2. Set `irsa_policy_arns` to least-privilege custom policy ARNs scoped to only the Secrets Manager secrets and SSM parameter paths ESO should read.
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+After the chart is installed, create your `ClusterSecretStore` / `SecretStore` and `ExternalSecret` Kubernetes resources to sync values into native Kubernetes `Secret` objects.
+
+If you do **not** have External Secrets Operator installed yet, starter manifests will not reconcile until ESO is deployed.
+
+Starter manifests live under `examples/external-secrets/`:
+
+- Use `ClusterSecretStore` for shared platform stores.
+- Use namespace-scoped `SecretStore` for tighter tenant isolation.
+- AWS Secrets Manager, AWS SSM Parameter Store, and HashiCorp Vault variants are all included.
+
+Quick starts (after editing placeholders like region/path/URL):
+
+```bash
+# AWS Secrets Manager (cluster-scoped)
+kubectl apply -f examples/external-secrets/clustersecretstore-aws-secretsmanager.yaml
+kubectl apply -f examples/external-secrets/externalsecret-example.yaml
+
+# AWS SSM Parameter Store (namespace-scoped example)
+kubectl apply -f examples/external-secrets/secretstore-aws-parameterstore.yaml
+kubectl apply -f examples/external-secrets/externalsecret-ssm-secretstore.yaml
+
+# HashiCorp Vault (cluster-scoped example)
+kubectl apply -f examples/external-secrets/clustersecretstore-vault.yaml
+kubectl apply -f examples/external-secrets/externalsecret-vault-clusterstore-example.yaml
+```
+
+For the full matrix of files and usage patterns, see `examples/external-secrets/README.md`.
+
+### Log aggregation (Fluent Bit)
+
+`kube-prometheus-stack` covers metrics/alerts, but not cluster log shipping. Pair it with Fluent Bit.
+
+`infra/terraform.tfvars` includes a `helm_releases.fluent_bit` example (disabled by default with `create=false`) using the AWS `aws-for-fluent-bit` Helm chart and IRSA.
+
+To enable it:
+
+1. Set `helm_releases.fluent_bit.create = true` in `infra/terraform.tfvars`.
+2. Set `irsa_policy_arns` to least-privilege custom policy ARNs for your selected destination.
+3. Update destination values (CloudWatch shown by default).
+4. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Starter values are included in:
+
+- `examples/fluent-bit/values-cloudwatch.yaml`
+- `examples/fluent-bit/values-s3.yaml`
+- `examples/fluent-bit/values-opensearch.yaml`
+
+IAM policy templates are included in:
+
+- `examples/fluent-bit/policies/cloudwatch-logs-write-policy.json`
+- `examples/fluent-bit/policies/s3-write-policy.json`
+- `examples/fluent-bit/policies/opensearch-write-policy.json`
+
+You can render/create these policies with:
+
+```bash
+./scripts/create-fluent-bit-policy.sh --help
+```
+
+For S3/OpenSearch, keep the same Helm + IRSA pattern and replace destination output values plus IAM permissions.
+
+See `examples/fluent-bit/README.md` for full setup notes.
+
+### Persistent storage (EBS + EFS)
+
+EBS and EFS are common EKS storage add-ons for PV/PVC workloads:
+
+- EBS CSI is already enabled via `eks_addons.aws-ebs-csi-driver` in `infra/terraform.tfvars`.
+- EFS CSI starter is available via `helm_releases.efs_csi` in `infra/terraform.tfvars` (disabled by default).
+
+To enable EFS CSI:
+
+1. Set `helm_releases.efs_csi.create = true` in `infra/terraform.tfvars`.
+2. Enable Terraform-managed EFS infrastructure in `infra/terraform.tfvars` by setting `enable_efs_filesystem = true` (or use an existing EFS filesystem).
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+StorageClass/PVC starter manifests are included in `examples/storage/`:
+
+- `storageclass-ebs-gp3.yaml` + `pvc-ebs-example.yaml`
+- `storageclass-efs.yaml` + `pvc-efs-example.yaml`
+
+For EFS, render/apply `storageclass-efs.yaml` with an explicit filesystem ID:
+
+```bash
+EFS_FILE_SYSTEM_ID="$(terraform -chdir=infra output -raw efs_file_system_id)" envsubst < examples/storage/storageclass-efs.yaml | kubectl apply -f -
+kubectl apply -f examples/storage/pvc-efs-example.yaml
+```
+
+See `examples/storage/README.md` for usage and verification commands.
+
+### Backup / DR (Velero)
+
+Velero provides backup/restore for Kubernetes objects and PV snapshots to AWS, which helps recover from accidental namespace deletion or failed stateful rollouts.
+
+`infra/terraform.tfvars` includes a `helm_releases.velero` example (disabled by default with `create=false`) using Helm + IRSA.
+
+To enable it:
+
+1. Set `helm_releases.velero.create = true` in `infra/terraform.tfvars`.
+2. Configure backup bucket/region and snapshot location in Velero values.
+3. Set `irsa_policy_arns` to your Velero least-privilege policy ARN.
+4. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Starter files are in `examples/velero/`:
+
+- `values-aws-s3-ebs.yaml`
+- `schedule-daily.yaml`
+- `restore-latest-from-schedule.sh`
+- `policies/velero-s3-ebs-snapshots-policy.json`
+
+See `examples/velero/README.md` for setup, policy rendering, and restore workflow.
 
 Template baseline note:
 
