@@ -5,7 +5,7 @@ tflint = "0.61.0"
 trivy = "0.69.1"
 gitleaks = "8.30.0"
 terraform-docs = "0.21.0"
-checkov = "3.2.500"
+checkov = "3.2.506"
 pre-commit = "4"
 python = "3.12"
 uv = "latest"
@@ -54,7 +54,7 @@ run = "terraform -chdir=${TF_DIR} validate"
 
 [tasks."terraform:validate-ci"]
 description = "CI-safe validation (no remote backend init)"
-run = "mkdir -p .terraform.d/plugin-cache && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} validate"
+run = "mkdir -p .terraform.d/plugin-cache && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false -lockfile=readonly && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} validate"
 
 [tasks."terraform:plan"]
 description = "Generates and saves an execution plan"
@@ -87,11 +87,11 @@ run = "if [ ! -d modules ]; then exit 0; fi; for d in modules/*; do if [ -d \"$d
 
 [tasks."trivy:iac"]
 description = "Runs Trivy IaC scan (Terraform misconfig)"
-run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci ${TF_DIR}"
+run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --tf-vars ${TF_DIR}/terraform.tfvars --tf-exclude-downloaded-modules --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci ${TF_DIR}"
 
 [tasks."trivy:sarif"]
 description = "Runs Trivy IaC scan and writes SARIF report"
-run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci --format sarif --output trivy.sarif ${TF_DIR}"
+run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --tf-vars ${TF_DIR}/terraform.tfvars --tf-exclude-downloaded-modules --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci --format sarif --output trivy.sarif ${TF_DIR}"
 
 [tasks."gitleaks:scan"]
 description = "Scans repo for secrets"

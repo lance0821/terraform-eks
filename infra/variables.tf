@@ -110,3 +110,75 @@ variable "eks_addons_external_dns" {
   description = "Configuration map passed to external_dns in eks-addons module."
   default     = {}
 }
+
+variable "enable_cert_manager" {
+  type        = bool
+  description = "Enable cert-manager via eks-addons module."
+  default     = true
+}
+
+variable "enable_kube_prometheus_stack" {
+  type        = bool
+  description = "Enable kube-prometheus-stack via eks-addons module."
+  default     = true
+}
+
+variable "enable_karpenter" {
+  type        = bool
+  description = "Enable Karpenter via eks-addons module."
+  default     = false
+}
+
+variable "enable_argocd" {
+  type        = bool
+  description = "Enable ArgoCD via eks-addons module."
+  default     = false
+}
+
+variable "aws_load_balancer_controller_config" {
+  type        = any
+  description = "Configuration map passed to aws_load_balancer_controller in eks-addons module."
+  default     = {}
+}
+
+variable "metrics_server_config" {
+  type        = any
+  description = "Configuration map passed to metrics_server in eks-addons module."
+  default     = {}
+}
+
+variable "external_dns_config" {
+  type        = any
+  description = "Configuration map passed to external_dns in eks-addons module."
+  default     = {}
+}
+
+variable "cert_manager_config" {
+  type        = any
+  description = "Configuration map passed to cert_manager in eks-addons module."
+  default     = {}
+}
+
+variable "kube_prometheus_stack_config" {
+  type        = any
+  description = "Configuration map passed to kube_prometheus_stack in eks-addons module."
+  default     = {}
+}
+
+variable "karpenter_config" {
+  type        = any
+  description = "Configuration map passed to karpenter in eks-addons module."
+  default     = {}
+}
+
+variable "argocd_config" {
+  type        = any
+  description = "Configuration map passed to argo_cd in eks-addons module."
+  default     = {}
+}
+
+variable "helm_releases" {
+  type        = any
+  description = "Map of Helm releases to install on the EKS cluster."
+  default     = {}
+}

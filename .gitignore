@@ -7,8 +7,15 @@
 *.tfstate.*
 *.tfplan
 tfplan
+**/.terraform-pin/
+
+*.sarif
+*.sarif/
 trivy.sarif
 checkov.sarif
+checkov.sarif/
+checkov-all.sarif
+checkov-all.sarif/
 
 *.tfvars.json
 

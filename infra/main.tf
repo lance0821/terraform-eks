@@ -45,18 +45,38 @@ module "eks_addons" {
 
   cluster_name      = module.eks.cluster_name
   cluster_endpoint  = module.eks.cluster_endpoint
-  cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
   region            = var.region
   vpc_id            = module.vpc.vpc_id
 
+  # ── Baseline ───────────────────────────────────────────────────────────
   enable_aws_load_balancer_controller = var.enable_aws_load_balancer_controller
-  enable_metrics_server               = var.enable_metrics_server
-  enable_external_dns                 = var.enable_external_dns
+  aws_load_balancer_controller        = var.aws_load_balancer_controller_config
 
-  aws_load_balancer_controller = var.eks_addons_aws_load_balancer_controller
-  metrics_server               = var.eks_addons_metrics_server
-  external_dns                 = var.eks_addons_external_dns
+  enable_metrics_server = var.enable_metrics_server
+  metrics_server        = var.metrics_server_config
+
+  # ── DNS & TLS ──────────────────────────────────────────────────────────
+  enable_external_dns = var.enable_external_dns
+  external_dns        = var.external_dns_config
+
+  enable_cert_manager = var.enable_cert_manager
+  cert_manager        = var.cert_manager_config
+
+  # ── Observability ──────────────────────────────────────────────────────
+  enable_kube_prometheus_stack = var.enable_kube_prometheus_stack
+  kube_prometheus_stack        = var.kube_prometheus_stack_config
+
+  # ── Autoscaling ────────────────────────────────────────────────────────
+  enable_karpenter = var.enable_karpenter
+  karpenter        = var.karpenter_config
+
+  # ── GitOps ─────────────────────────────────────────────────────────────
+  enable_argocd = var.enable_argocd
+  argocd        = var.argocd_config
+
+  # ── Generic (any additional charts) ────────────────────────────────────
+  helm_releases = var.helm_releases
 
   tags = local.tags
 }

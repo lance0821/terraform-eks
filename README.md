@@ -42,6 +42,14 @@ rm -rf ~/.aws/sso/cache ~/.aws/cli/cache
 aws sso login --profile dev --use-device-code
 ```
 
+- If Terraform reports `No valid credential sources found`, set the profile explicitly and retry:
+
+```bash
+export AWS_PROFILE=dev
+aws sts get-caller-identity --profile dev
+AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
+```
+
 `mise.toml` loads `.env` via `_.file = ".env"`, so tasks pick up `AWS_PROFILE`/`AWS_REGION` automatically.
 
 ### One-time shell setup
@@ -100,6 +108,8 @@ If you have not set up your local AWS environment yet, follow `Codespaces / AWS 
 
 For remote containers/Codespaces, use `--use-device-code` for SSO login and see the troubleshooting note above if auth fails.
 
+For direct AWS CLI/Terraform commands outside `mise run`, prefer an explicit profile (for example `AWS_PROFILE=dev`).
+
 Verify active AWS credentials/profile with the task in `mise.toml`:
 
 ```bash
@@ -129,6 +139,18 @@ mise run checkov:scan
 mise run checkov:scan-all
 mise run check
 mise run check:ci
+```
+
+If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit:
+
+```bash
+AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
+```
+
+Or export once per shell session:
+
+```bash
+export AWS_PROFILE=dev
 ```
 
 Template baseline note:

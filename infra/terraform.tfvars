@@ -30,3 +30,7 @@ eks_addons = {
 enable_aws_load_balancer_controller = true
 enable_metrics_server               = true
 enable_external_dns                 = false
+enable_cert_manager                 = true
+enable_kube_prometheus_stack        = true
+enable_karpenter                    = false
+enable_argocd                       = true

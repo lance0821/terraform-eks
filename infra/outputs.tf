@@ -1,13 +1,95 @@
+################################################################################
+# Account
+################################################################################
+
 output "account_id" {
   description = "AWS account ID of the current caller."
   value       = data.aws_caller_identity.current.account_id
 }
 
-output "vpc_id" { value = module.vpc.vpc_id }
-output "private_subnets" { value = module.vpc.private_subnets }
-output "public_subnets" { value = module.vpc.public_subnets }
+################################################################################
+# VPC
+################################################################################
 
-output "cluster_name" { value = module.eks.cluster_name }
-output "cluster_endpoint" { value = module.eks.cluster_endpoint }
-output "cluster_version" { value = module.eks.cluster_version }
-output "oidc_provider_arn" { value = module.eks.oidc_provider_arn }
+output "vpc_id" {
+  description = "VPC ID."
+  value       = module.vpc.vpc_id
+}
+
+output "private_subnets" {
+  description = "Private subnet IDs."
+  value       = module.vpc.private_subnets
+}
+
+output "public_subnets" {
+  description = "Public subnet IDs."
+  value       = module.vpc.public_subnets
+}
+
+################################################################################
+# EKS Cluster
+################################################################################
+
+output "cluster_name" {
+  description = "EKS cluster name."
+  value       = module.eks.cluster_name
+}
+
+output "cluster_endpoint" {
+  description = "EKS cluster API endpoint."
+  value       = module.eks.cluster_endpoint
+}
+
+output "cluster_version" {
+  description = "Kubernetes version."
+  value       = module.eks.cluster_version
+}
+
+output "oidc_provider_arn" {
+  description = "OIDC provider ARN for IRSA."
+  value       = module.eks.oidc_provider_arn
+}
+
+################################################################################
+# Helm Addons
+################################################################################
+
+output "addon_alb_controller" {
+  description = "AWS Load Balancer Controller status."
+  value       = module.eks_addons.aws_load_balancer_controller
+}
+
+output "addon_metrics_server" {
+  description = "Metrics Server status."
+  value       = module.eks_addons.metrics_server
+}
+
+output "addon_external_dns" {
+  description = "External DNS status."
+  value       = module.eks_addons.external_dns
+}
+
+output "addon_cert_manager" {
+  description = "cert-manager status."
+  value       = module.eks_addons.cert_manager
+}
+
+output "addon_kube_prometheus_stack" {
+  description = "kube-prometheus-stack status."
+  value       = module.eks_addons.kube_prometheus_stack
+}
+
+output "addon_karpenter" {
+  description = "Karpenter status."
+  value       = module.eks_addons.karpenter
+}
+
+output "addon_argocd" {
+  description = "Argo CD status."
+  value       = module.eks_addons.argocd
+}
+
+output "addon_helm_releases" {
+  description = "Generic Helm releases status map."
+  value       = module.eks_addons.helm_releases
+}
