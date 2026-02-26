@@ -144,6 +144,8 @@ mise run check
 mise run check:ci
 ```
 
+`check:ci` runs several tasks in parallel. The `tflint:modules` task initializes each module with an isolated `TF_DATA_DIR` under `.terraform-ci/tflint-modules/<module>` to avoid shared-state races during concurrent CI runs.
+
 If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit:
 
 ```bash
