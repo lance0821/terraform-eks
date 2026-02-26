@@ -77,7 +77,7 @@ run = "kubectl config current-context && kubectl get nodes"
 
 [tasks."kubeconfig:placement"]
 description = "Show pod -> node -> capacity type placement"
-run = "kubectl get pods -n default -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.nodeName}{\"\\n\"}{end}' | while read -r pod node; do cap=$(kubectl get node \"$node\" -o jsonpath='{.metadata.labels.eks\\.amazonaws\\.com/capacityType}'); echo \"$pod $node $cap\"; done"
+run = "kubectl get pods -n default -o jsonpath='{range .items[*]}{.metadata.name}{\"\\t\"}{.spec.nodeName}{\"\\n\"}{end}' | while read -r pod node; do if [[ -z \"$node\" ]]; then echo \"$pod PENDING\"; continue; fi; cap=$(kubectl get node \"$node\" -o jsonpath='{.metadata.labels.eks\\.amazonaws\\.com/capacityType}'); echo \"$pod $node ${cap:-UNKNOWN}\"; done"
 
 [tasks."terraform:destroy"]
 description = "Destroy Terraform-managed infrastructure"
@@ -91,12 +91,12 @@ run = "tflint --init --config=.tflint.hcl"
 [tasks."tflint:run"]
 description = "Runs TFLint against the project"
 depends = ["tflint:init"]
-run = "tflint --chdir=${TF_DIR} --config=../.tflint.hcl"
+run = "mkdir -p .terraform.d/plugin-cache && TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=${TF_DIR} init -backend=false -input=false -lockfile=readonly >/dev/null && tflint --chdir=${TF_DIR} --config=../.tflint.hcl --call-module-type=none"
 
 [tasks."tflint:modules"]
 description = "Runs TFLint against Terraform modules (if modules/ exists)"
 depends = ["tflint:init"]
-run = "if [ ! -d modules ]; then exit 0; fi; for d in modules/*; do if [ -d \"$d\" ] && ls \"$d\"/*.tf >/dev/null 2>&1; then terraform -chdir=\"$d\" init -backend=false -input=false >/dev/null && tflint --chdir=\"$d\" --config=../../.tflint.hcl; fi; done"
+run = "mkdir -p .terraform.d/plugin-cache; if [ ! -d modules ]; then exit 0; fi; for d in modules/*; do if [ -d \"$d\" ] && ls \"$d\"/*.tf >/dev/null 2>&1; then TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache TF_DATA_DIR=.terraform-ci terraform -chdir=\"$d\" init -backend=false -input=false -lockfile=readonly >/dev/null && tflint --chdir=\"$d\" --config=../../.tflint.hcl; fi; done"
 
 [tasks."trivy:iac"]
 description = "Runs Trivy IaC scan (Terraform misconfig)"

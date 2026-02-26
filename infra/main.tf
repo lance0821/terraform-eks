@@ -77,7 +77,7 @@ module "eks_addons" {
   argocd        = var.argocd_config
 
   # ── Generic (any additional charts) ────────────────────────────────────
-  helm_releases = var.helm_releases
+  helm_releases = local.helm_releases_effective
 
   tags = local.tags
 }

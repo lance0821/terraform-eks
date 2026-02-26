@@ -23,6 +23,10 @@ variable "cluster_endpoint" {
 variable "region" {
   description = "AWS region."
   type        = string
+  validation {
+    condition     = trimspace(var.region) != ""
+    error_message = "region must not be empty."
+  }
 }
 
 variable "vpc_id" {

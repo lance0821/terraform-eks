@@ -25,9 +25,12 @@ variable "chart" {
 }
 
 variable "chart_version" {
-  description = "Chart version. If unset, latest is installed."
+  description = "Pinned chart version. This value is required."
   type        = string
-  default     = null
+  validation {
+    condition     = trimspace(var.chart_version) != ""
+    error_message = "chart_version must not be empty. Pin an explicit chart version."
+  }
 }
 
 variable "namespace" {
@@ -183,6 +186,10 @@ variable "irsa_role_name_prefix" {
   description = "Prefix for the IRSA IAM role name."
   type        = string
   default     = ""
+  validation {
+    condition     = !var.create_irsa_role || trimspace(var.irsa_role_name_prefix) != ""
+    error_message = "irsa_role_name_prefix must not be empty when create_irsa_role is true."
+  }
 }
 
 variable "irsa_annotation_key" {
@@ -202,12 +209,20 @@ variable "irsa_service_account_name" {
   description = "Kubernetes service account name for IRSA binding."
   type        = string
   default     = ""
+  validation {
+    condition     = !var.create_irsa_role || trimspace(var.irsa_service_account_name) != ""
+    error_message = "irsa_service_account_name must not be empty when create_irsa_role is true."
+  }
 }
 
 variable "oidc_provider_arn" {
   description = "OIDC provider ARN for IRSA. Required when create_irsa_role = true."
   type        = string
   default     = ""
+  validation {
+    condition     = !var.create_irsa_role || trimspace(var.oidc_provider_arn) != ""
+    error_message = "oidc_provider_arn must not be empty when create_irsa_role is true."
+  }
 }
 
 variable "irsa_policy_arns" {

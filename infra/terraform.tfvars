@@ -2,7 +2,7 @@ project_name = "terraform-eks"
 region       = "us-east-1"
 environment  = "dev"
 extra_tags = {
-  Owner = "Lance Henderson"
+  Owner = "Platform Owner"
   Team  = "DevOps"
 }
 
@@ -96,13 +96,15 @@ eks_addons = {
   aws-ebs-csi-driver = {}
 }
 
-enable_aws_load_balancer_controller = true
-enable_metrics_server               = true
-enable_external_dns                 = false
-enable_cert_manager                 = true
-enable_kube_prometheus_stack        = true
-enable_karpenter                    = false
-enable_argocd                       = true
+enable_aws_load_balancer_controller  = true
+enable_metrics_server                = true
+enable_external_dns                  = false
+enable_cert_manager                  = true
+enable_kube_prometheus_stack         = true
+enable_karpenter                     = false
+enable_argocd                        = true
+enable_fluent_bit_cloudwatch_policy  = true
+fluent_bit_cloudwatch_log_group_name = "/aws/eks/terraform-eks/cluster"
 
 helm_releases = {
   external_secrets = {
@@ -142,11 +144,9 @@ helm_releases = {
     irsa_service_account_name = "fluent-bit"
     irsa_annotation_key       = "serviceAccount"
 
-    # Attach least-privilege custom policies for your selected destination.
-    # CloudWatch starter policy example shown below.
-    irsa_policy_arns = {
-      cloudwatch_logs_write = "arn:aws:iam::<ACCOUNT_ID>:policy/FluentBitCloudWatchLogsWrite"
-    }
+    # CloudWatch IRSA policy is created/managed in Terraform and attached automatically.
+    # For S3/OpenSearch, add additional destination-specific policy ARNs as needed.
+    irsa_policy_arns = {}
 
     # CloudWatch Logs starter values. For S3/OpenSearch, replace with destination-specific values.
     values = [

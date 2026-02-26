@@ -114,6 +114,4 @@ resource "helm_release" "this" {
   set = local.merged_set
 
   set_sensitive = var.set_sensitive
-
-  depends_on = [module.irsa]
 }

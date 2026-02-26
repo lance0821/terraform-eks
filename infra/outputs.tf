@@ -94,6 +94,11 @@ output "addon_helm_releases" {
   value       = module.eks_addons.helm_releases
 }
 
+output "fluent_bit_cloudwatch_policy_arn" {
+  description = "Terraform-managed Fluent Bit CloudWatch Logs policy ARN (if created)."
+  value       = local.fluent_bit_cloudwatch_policy_enabled ? aws_iam_policy.fluent_bit_cloudwatch_logs_write[0].arn : null
+}
+
 ################################################################################
 # EFS
 ################################################################################

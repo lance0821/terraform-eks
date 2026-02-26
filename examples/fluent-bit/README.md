@@ -13,9 +13,10 @@ This starter pairs with `kube-prometheus-stack` by adding cluster log shipping v
 ## Enable Fluent Bit via Terraform
 
 1. In `infra/terraform.tfvars`, set `helm_releases.fluent_bit.create = true`.
-2. Replace `irsa_policy_arns` with least-privilege custom policy ARNs for your destination.
-3. Update region/log group values as needed.
-4. Apply:
+2. Keep `enable_fluent_bit_cloudwatch_policy = true` so Terraform creates and manages the CloudWatch Logs write policy.
+3. Set `fluent_bit_cloudwatch_log_group_name` if you want a custom log group (default: `/aws/eks/<project>-<environment>/cluster`).
+4. Add extra destination-specific policy ARNs to `helm_releases.fluent_bit.irsa_policy_arns` only when needed (for example S3/OpenSearch).
+5. Apply:
 
 ```bash
 mise run terraform:apply
@@ -29,40 +30,15 @@ Starter templates are provided under `examples/fluent-bit/policies/`:
 - `s3-write-policy.json`
 - `opensearch-write-policy.json`
 
-Replace placeholders (`<ACCOUNT_ID>`, `<REGION>`, etc.), create IAM policies in your account, and attach policy ARNs in `helm_releases.fluent_bit.irsa_policy_arns`.
+CloudWatch policy creation is now Terraform-managed in `infra/iam.tf` and automatically injected into `helm_releases.fluent_bit.irsa_policy_arns`.
 
-Use helper script to render and create policies:
-
-```bash
-# CloudWatch Logs policy
-./scripts/create-fluent-bit-policy.sh \
-	--template cloudwatch \
-	--policy-name FluentBitCloudWatchLogsWrite \
-	--region us-east-1 \
-	--log-group-name /aws/eks/terraform-eks/cluster
-
-# S3 policy
-./scripts/create-fluent-bit-policy.sh \
-	--template s3 \
-	--policy-name FluentBitS3Write \
-	--bucket-name my-eks-logs-bucket \
-	--prefix fluent-bit/dev
-
-# OpenSearch policy (render-only)
-./scripts/create-fluent-bit-policy.sh \
-	--template opensearch \
-	--policy-name FluentBitOpenSearchWrite \
-	--domain-name my-logs-domain \
-	--render-only
-```
-
-Template variables are `${REGION}`, `${ACCOUNT_ID}`, `${LOG_GROUP_NAME}`, `${BUCKET_NAME}`, `${PREFIX}`, `${DOMAIN_NAME}`.
+Use `s3-write-policy.json` and `opensearch-write-policy.json` as policy templates when you need additional destination-specific IAM policies, then add those ARNs under `helm_releases.fluent_bit.irsa_policy_arns`.
 
 Example:
 
 ```hcl
 irsa_policy_arns = {
-	logs_write = "arn:aws:iam::<ACCOUNT_ID>:policy/FluentBitCloudWatchLogsWrite"
+	s3_write = "arn:aws:iam::<ACCOUNT_ID>:policy/FluentBitS3Write"
 }
 ```
 

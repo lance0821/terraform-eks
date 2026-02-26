@@ -156,6 +156,8 @@ Or export once per shell session:
 export AWS_PROFILE=dev
 ```
 
+Before your first apply, review `infra/terraform.tfvars` and customize `extra_tags` (for example `Owner` and `Team`) to match your organization.
+
 ### Worker node cost optimization (Spot)
 
 `infra/terraform.tfvars` uses a mixed-capacity node group pattern by default:
@@ -304,8 +306,8 @@ For the full matrix of files and usage patterns, see `examples/external-secrets/
 To enable it:
 
 1. Set `helm_releases.fluent_bit.create = true` in `infra/terraform.tfvars`.
-2. Set `irsa_policy_arns` to least-privilege custom policy ARNs for your selected destination.
-3. Update destination values (CloudWatch shown by default).
+2. Keep `enable_fluent_bit_cloudwatch_policy = true` to have Terraform manage a least-privilege CloudWatch Logs policy and attach it to Fluent Bit IRSA automatically.
+3. Update destination values (CloudWatch shown by default) and optionally set `fluent_bit_cloudwatch_log_group_name`.
 4. Apply Terraform:
 
 ```bash
@@ -323,12 +325,6 @@ IAM policy templates are included in:
 - `examples/fluent-bit/policies/cloudwatch-logs-write-policy.json`
 - `examples/fluent-bit/policies/s3-write-policy.json`
 - `examples/fluent-bit/policies/opensearch-write-policy.json`
-
-You can render/create these policies with:
-
-```bash
-./scripts/create-fluent-bit-policy.sh --help
-```
 
 For S3/OpenSearch, keep the same Helm + IRSA pattern and replace destination output values plus IAM permissions.
 

@@ -105,24 +105,6 @@ variable "enable_external_dns" {
   default     = false
 }
 
-variable "eks_addons_aws_load_balancer_controller" {
-  type        = any
-  description = "Configuration map passed to aws_load_balancer_controller in eks-addons module."
-  default     = {}
-}
-
-variable "eks_addons_metrics_server" {
-  type        = any
-  description = "Configuration map passed to metrics_server in eks-addons module."
-  default     = {}
-}
-
-variable "eks_addons_external_dns" {
-  type        = any
-  description = "Configuration map passed to external_dns in eks-addons module."
-  default     = {}
-}
-
 variable "enable_cert_manager" {
   type        = bool
   description = "Enable cert-manager via eks-addons module."
@@ -193,6 +175,18 @@ variable "helm_releases" {
   type        = any
   description = "Map of Helm releases to install on the EKS cluster."
   default     = {}
+}
+
+variable "enable_fluent_bit_cloudwatch_policy" {
+  type        = bool
+  description = "Create and manage a least-privilege CloudWatch Logs IAM policy for fluent-bit IRSA when helm_releases.fluent_bit.create is true."
+  default     = true
+}
+
+variable "fluent_bit_cloudwatch_log_group_name" {
+  type        = string
+  description = "CloudWatch Logs log group name for Fluent Bit output policy. If null, defaults to /aws/eks/<project>-<environment>/cluster."
+  default     = null
 }
 
 variable "enable_efs_filesystem" {

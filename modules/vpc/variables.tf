@@ -17,7 +17,7 @@ variable "azs" {
   type        = list(string)
   validation {
     condition     = length(var.azs) > 0
-    error_message = "AZs must contain at least one availability zone."
+    error_message = "azs must contain at least one availability zone."
   }
 }
 
@@ -26,7 +26,7 @@ variable "private_subnets" {
   type        = list(string)
   validation {
     condition     = length(var.private_subnets) == length(var.azs)
-    error_message = "Private_subnets must contain exactly one CIDR per availability zone in AZs	."
+    error_message = "private_subnets must contain exactly one CIDR per availability zone in azs."
   }
   validation {
     condition     = alltrue([for subnet in var.private_subnets : can(cidrhost(subnet, 0))])
@@ -39,7 +39,7 @@ variable "public_subnets" {
   type        = list(string)
   validation {
     condition     = length(var.public_subnets) == length(var.azs)
-    error_message = "Public Subnets must contain exactly one CIDR per availability zone in AZs."
+    error_message = "public_subnets must contain exactly one CIDR per availability zone in azs."
   }
   validation {
     condition     = alltrue([for subnet in var.public_subnets : can(cidrhost(subnet, 0))])

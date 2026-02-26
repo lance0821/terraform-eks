@@ -253,6 +253,13 @@ module "karpenter" {
   tags = var.tags
 }
 
+check "karpenter_requires_irsa_policies" {
+  assert {
+    condition     = !var.enable_karpenter || length(lookup(local.karpenter, "irsa_policy_arns", {})) > 0
+    error_message = "When enabling Karpenter, you must provide at least one policy ARN via the `karpenter.irsa_policy_arns` variable."
+  }
+}
+
 ################################################################################
 # Argo CD
 ################################################################################
@@ -296,7 +303,7 @@ module "helm_releases" {
   name             = try(each.value.name, each.key)
   repository       = try(each.value.repository, null)
   chart            = each.value.chart
-  chart_version    = try(each.value.chart_version, null)
+  chart_version    = each.value.chart_version
   namespace        = try(each.value.namespace, "kube-system")
   create_namespace = try(each.value.create_namespace, false)
   description      = try(each.value.description, null)

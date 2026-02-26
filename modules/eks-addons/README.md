@@ -20,7 +20,6 @@ This module composes reusable `../helm-release` modules to install:
 - Providers:
   - `hashicorp/helm ~> 3.1`
   - `hashicorp/aws ~> 6.34.0`
-  - `hashicorp/kubernetes ~> 3.0.1`
 
 ## Usage
 

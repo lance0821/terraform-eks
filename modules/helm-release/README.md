@@ -69,7 +69,7 @@ module "external_dns" {
 | `name` | `string` | n/a | Release name. |
 | `repository` | `string` | `null` | Helm chart repository URL. |
 | `chart` | `string` | n/a | Chart name or path. |
-| `chart_version` | `string` | `null` | Chart version; if unset, latest is installed. |
+| `chart_version` | `string` | n/a | Pinned chart version (required). |
 | `namespace` | `string` | `kube-system` | Namespace for release. |
 | `create_namespace` | `bool` | `false` | Create namespace if it does not exist. |
 | `description` | `string` | `null` | Helm release description. |
@@ -102,7 +102,7 @@ module "external_dns" {
 | Name | Type | Default | Description |
 |---|---|---:|---|
 | `create_irsa_role` | `bool` | `false` | Create IAM role for Kubernetes service account. |
-| `irsa_role_name_prefix` | `string` | `""` | Prefix used for IRSA role name. |
+| `irsa_role_name_prefix` | `string` | `""` | Prefix used for IRSA role name. Required when `create_irsa_role = true`. |
 | `irsa_annotation_key` | `string` | `serviceAccount` | Helm value path prefix for service account fields. |
 | `irsa_service_account_name` | `string` | `""` | Service account name bound to IAM role. |
 | `oidc_provider_arn` | `string` | `""` | OIDC provider ARN for IRSA. |
@@ -115,6 +115,8 @@ module "external_dns" {
 | `tags` | `map(string)` | `{}` | Tags applied to IAM resources. |
 
 ## IRSA annotation behavior
+
+When `create_irsa_role = true`, set a non-empty `irsa_role_name_prefix`.
 
 When `create_irsa_role = true`, the module auto-injects these Helm `set` values:
 - `<irsa_annotation_key>.create = true`

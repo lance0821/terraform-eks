@@ -11,4 +11,5 @@ paths = [
   '''^infra/\.terraform/''',
   '''^infra/\.terraform-ci/''',
   '''^modules/[^/]+/\.terraform/''',
+  '''^modules/[^/]+/\.terraform-ci/''',
 ]
