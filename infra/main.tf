@@ -66,11 +66,6 @@ module "eks" {
 
 }
 
-# ── Node-group readiness gate ─────────────────────────────────────────
-# The upstream EKS module creates node groups asynchronously.
-# Helm releases with wait = true will fail if no nodes have joined.
-# This gate blocks until every managed node group reaches ACTIVE status
-# and at least one node is Ready in the cluster.
 resource "null_resource" "eks_node_readiness" {
   depends_on = [module.eks]
 
@@ -92,7 +87,6 @@ resource "null_resource" "eks_node_readiness" {
 
       echo "Waiting for EKS node groups to become ACTIVE..."
 
-      # Wait for each managed node group to reach ACTIVE status
       for ng in ${join(" ", keys(var.eks_managed_node_groups))}; do
         echo "  Waiting for node group: $ng"
         aws eks wait nodegroup-active \
@@ -106,7 +100,6 @@ resource "null_resource" "eks_node_readiness" {
         echo "  Warning: could not wait for $ng (may already be active)"
       done
 
-      # Wait for at least one node to be Ready
       echo "Waiting for nodes to join cluster..."
       for i in $(seq 1 60); do
         READY=$(kubectl get nodes --no-headers 2>/dev/null | grep -c ' Ready ' || true)
