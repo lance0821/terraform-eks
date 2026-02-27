@@ -23,6 +23,8 @@ TF_DIR         = "infra"
 TF_IN_AUTOMATION = "true"
 AWS_REGION     = "us-east-1"
 
+[settings]
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Terraform
 # ─────────────────────────────────────────────────────────────────────────────
@@ -30,11 +32,8 @@ AWS_REGION     = "us-east-1"
 [tasks."tf:init"]
 description = "Initialize Terraform with S3 backend (requires .env)"
 run = """
-: # ensure script runs under any /bin/sh (dash doesn't support pipefail)
-set -eu
-if (set -o pipefail) 2>/dev/null; then
-  set -o pipefail
-fi
+#!/usr/bin/env bash
+set -euo pipefail
 : "${TF_STATE_BUCKET:?Set TF_STATE_BUCKET in .env}"
 : "${TF_STATE_PREFIX:?Set TF_STATE_PREFIX in .env}"
 : "${TF_STATE_ENV:?Set TF_STATE_ENV in .env}"
@@ -80,12 +79,10 @@ terraform -chdir=${TF_DIR} validate
 """
 
 [tasks."tf:test"]
-description = "Run Terraform tests"
+description = "Run Terraform tests (from repo root)"
 run = """
-set -eu
-if (set -o pipefail) 2>/dev/null; then
-  set -o pipefail
-fi
+#!/usr/bin/env bash
+set -euo pipefail
 mkdir -p .terraform.d/plugin-cache
 for d in modules/*/; do
   if ls "$d"/*.tf >/dev/null 2>&1; then
@@ -103,11 +100,9 @@ terraform test
 [tasks."lint"]
 description = "TFLint on infra + modules"
 run = """
+#!/usr/bin/env bash
+set -euo pipefail
 tflint --init --config=.tflint.hcl
-set -eu
-if (set -o pipefail) 2>/dev/null; then
-  set -o pipefail
-fi
 
 mkdir -p .terraform.d/plugin-cache
 

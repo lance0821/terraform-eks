@@ -38,7 +38,6 @@ module "aws_load_balancer_controller" {
   oidc_provider_arn                           = var.oidc_provider_arn
   irsa_attach_load_balancer_controller_policy = true
 
-  lifecycle_create_before_destroy = try(local.alb.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -69,7 +68,6 @@ module "metrics_server" {
   values        = lookup(local.metrics, "values", [])
   set_sensitive = lookup(local.metrics, "set_sensitive", [])
 
-  lifecycle_create_before_destroy = try(local.metrics.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -114,7 +112,6 @@ module "external_dns" {
   oidc_provider_arn               = var.oidc_provider_arn
   irsa_attach_external_dns_policy = true
 
-  lifecycle_create_before_destroy = try(local.extdns.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -157,7 +154,6 @@ module "cert_manager" {
   irsa_attach_cert_manager_policy = true
   set_sensitive                   = lookup(local.certmgr, "set_sensitive", [])
 
-  lifecycle_create_before_destroy = try(local.certmgr.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -206,7 +202,6 @@ module "kube_prometheus_stack" {
     lookup(local.promstack, "values", [])
   )
   set_sensitive = lookup(local.promstack, "set_sensitive", [])
-  lifecycle_create_before_destroy = try(local.promstack.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -265,7 +260,6 @@ module "karpenter" {
   oidc_provider_arn         = var.oidc_provider_arn
   irsa_policy_arns          = lookup(local.karpenter, "irsa_policy_arns", {})
 
-  lifecycle_create_before_destroy = try(local.karpenter.lifecycle_create_before_destroy, false)
 
 
   tags = var.tags
@@ -339,7 +333,6 @@ module "argocd" {
   values        = lookup(local.argocd, "values", [])
   set_sensitive = lookup(local.argocd, "set_sensitive", [])
 
-  lifecycle_create_before_destroy = try(local.argocd.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }

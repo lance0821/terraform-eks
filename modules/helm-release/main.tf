@@ -111,6 +111,6 @@ resource "helm_release" "this" {
   set_sensitive = var.set_sensitive
 
   lifecycle {
-    create_before_destroy = var.lifecycle_create_before_destroy
+    create_before_destroy = true
   }
 }

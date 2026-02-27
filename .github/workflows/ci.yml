@@ -33,6 +33,10 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── Pre-commit (catches --no-verify bypasses) ───────────────────
+      - name: Pre-commit hooks
+        run: pre-commit run --all-files
+
       # ── Formatting ───────────────────────────────────────────────────
       - name: Terraform fmt
         run: terraform fmt -check -recursive
@@ -44,20 +48,6 @@ jobs:
           TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
             terraform -chdir=infra init -backend=false -input=false -lockfile=readonly
           terraform -chdir=infra validate
-
-      # ── Test ─────────────────────────────────────────────────────────
-      - name: Terraform test
-        run: |
-          mkdir -p .terraform.d/plugin-cache
-          for d in modules/*/; do
-            if ls "$d"/*.tf >/dev/null 2>&1; then
-              echo "::group::Init $d"
-              TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
-                terraform -chdir="$d" init -backend=false -input=false -lockfile=readonly >/dev/null
-              echo "::endgroup::"
-            fi
-          done
-          terraform test
 
       # ── TFLint ───────────────────────────────────────────────────────
       - name: TFLint init
@@ -77,6 +67,22 @@ jobs:
               echo "::endgroup::"
             fi
           done
+
+      # ── Terraform tests (from repo root) ─────────────────────────────
+      - name: Terraform tests
+        run: |
+          set -euo pipefail
+
+          echo "::group::Pre-initializing modules for tests"
+          for d in modules/*/; do
+            if ls "$d"/*.tf >/dev/null 2>&1; then
+              TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
+                terraform -chdir="$d" init -backend=false -input=false -lockfile=readonly >/dev/null || true
+            fi
+          done
+          echo "::endgroup::"
+
+          terraform test
 
       # ── Checkov ──────────────────────────────────────────────────────
       - name: Checkov scan

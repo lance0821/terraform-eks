@@ -271,10 +271,3 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
-
-
-variable "lifecycle_create_before_destroy" {
-  description = "Create the new release before destroying the old one. Enables zero-downtime upgrades for critical addons."
-  type        = bool
-  default     = false
-}
