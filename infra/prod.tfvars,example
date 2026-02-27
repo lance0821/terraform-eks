@@ -1,0 +1,96 @@
+# Production configuration
+# Copy to terraform.tfvars and customize for your environment.
+
+project_name = "terraform-eks"
+region       = "us-east-1"
+environment  = "prod"
+
+extra_tags = {
+  Owner = "Platform Team"
+  Team  = "SRE"
+}
+
+vpc_cidr           = "10.0.0.0/16"
+az_count           = 3
+kubernetes_version = "1.31"
+
+# ── VPC / NAT (HA) ──────────────────────────────────────────────────────
+single_nat_gateway     = false
+one_nat_gateway_per_az = true
+
+# ── EKS Security ────────────────────────────────────────────────────────
+endpoint_public_access               = false
+endpoint_private_access              = true
+cluster_endpoint_public_access_cidrs = []
+cluster_enabled_log_types            = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+create_kms_key                       = true
+
+# ── Access ───────────────────────────────────────────────────────────────
+# ⚠️  Set to false once team access entries are configured.
+enable_cluster_creator_admin_permissions = true
+
+# ⚠️  REPLACE <ACCOUNT_ID> with your actual AWS account ID.
+# eks_access_entries = {
+#   platform_admin = {
+#     principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/PlatformAdmin"
+#     policy_associations = {
+#       admin = {
+#         policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+#         access_scope = { type = "cluster" }
+#       }
+#     }
+#   }
+# }
+
+# ── EBS CSI IRSA ────────────────────────────────────────────────────────
+enable_ebs_csi_irsa = true
+
+# ── Node groups (production sizing) ─────────────────────────────────────
+eks_managed_node_groups = {
+  system = {
+    instance_types = ["m5.large"]
+    min_size       = 2
+    max_size       = 4
+    desired_size   = 2
+    capacity_type  = "ON_DEMAND"
+    labels         = { workload_tier = "system" }
+  }
+
+  spot = {
+    instance_types = ["m5.large", "m5a.large", "m5d.large", "m6i.large"]
+    min_size       = 2
+    max_size       = 10
+    desired_size   = 3
+    capacity_type  = "SPOT"
+    labels         = { workload_tier = "spot" }
+    taints = {
+      spot_only = {
+        key    = "workload-tier"
+        value  = "spot"
+        effect = "NO_SCHEDULE"
+      }
+    }
+  }
+}
+
+eks_addons = {
+  coredns            = {}
+  kube-proxy         = {}
+  vpc-cni            = {}
+  aws-ebs-csi-driver = {}
+}
+
+# ── Addons ───────────────────────────────────────────────────────────────
+enable_aws_load_balancer_controller = true
+enable_metrics_server               = true
+enable_external_dns                 = true
+enable_cert_manager                 = true
+enable_kube_prometheus_stack        = true
+enable_karpenter                    = false
+enable_argocd                       = true
+
+enable_fluent_bit_cloudwatch_policy  = true
+fluent_bit_cloudwatch_log_group_name = "/aws/eks/terraform-eks-prod/cluster"
+
+# ── EFS (optional) ──────────────────────────────────────────────────────
+enable_efs_filesystem = false

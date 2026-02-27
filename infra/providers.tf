@@ -2,16 +2,15 @@ provider "aws" {
   region = var.region
 }
 
-data "aws_eks_cluster" "this" {
-  name       = module.eks.cluster_name
-  depends_on = [module.eks]
-}
+# IMPORTANT: No data "aws_eks_cluster" here.
+#
+# Using module outputs directly means Terraform reads endpoint/CA from STATE
+# during destroy, not from a live API call.  This avoids the classic deadlock
+# where the cluster is gone but providers still need to configure.
 
-# exec plugin refreshes the token automatically during long applies,
-# avoiding the 15-minute expiry of the static data source token.
 provider "kubernetes" {
-  host                   = data.aws_eks_cluster.this.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
   exec {
     api_version = "client.authentication.k8s.io/v1"
@@ -22,8 +21,8 @@ provider "kubernetes" {
 
 provider "helm" {
   kubernetes = {
-    host                   = data.aws_eks_cluster.this.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
 
     exec = {
       api_version = "client.authentication.k8s.io/v1"

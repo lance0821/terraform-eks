@@ -20,12 +20,16 @@ TF_DIR = "infra"
 # Helpful defaults
 TF_IN_AUTOMATION = "true"
 
-# Optional defaults (I’d keep REGION, but avoid forcing PROFILE in repo)
+# AWS region (override in .env per workspace)
 AWS_REGION = "us-east-1"
-TF_STATE_BUCKET = "tfstate-llewandowski"
-TF_STATE_PREFIX = "terraform-labs"
-TF_STATE_ENV = "dev"
 # AWS_PROFILE = "dev"
+
+# State config — set real values in .env, NOT here.
+# These empty defaults prevent "unbound variable" errors in tasks.
+TF_STATE_BUCKET = "{{env.TF_STATE_BUCKET}}"
+TF_STATE_PREFIX = "{{env.TF_STATE_PREFIX}}"
+TF_STATE_ENV = "{{env.TF_STATE_ENV}}"
+
 
 [tasks."terraform:init"]
 description = "Initializes Terraform"
@@ -100,11 +104,36 @@ run = "mkdir -p .terraform.d/plugin-cache; if [ ! -d modules ]; then exit 0; fi;
 
 [tasks."trivy:iac"]
 description = "Runs Trivy IaC scan (Terraform misconfig)"
-run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --tf-vars ${TF_DIR}/terraform.tfvars --tf-exclude-downloaded-modules --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci ${TF_DIR}"
+run = """
+TFVARS_FLAG=""
+if [ -f "${TF_DIR}/terraform.tfvars" ]; then
+  TFVARS_FLAG="--tf-vars ${TF_DIR}/terraform.tfvars"
+fi
+trivy config --severity HIGH,CRITICAL --exit-code 1 \
+  $TFVARS_FLAG \
+  --tf-exclude-downloaded-modules \
+  --skip-dirs ${TF_DIR}/.external_modules \
+  --skip-dirs ${TF_DIR}/.terraform \
+  --skip-dirs .terraform-ci \
+  ${TF_DIR}
+"""
 
 [tasks."trivy:sarif"]
 description = "Runs Trivy IaC scan and writes SARIF report"
-run = "trivy config --severity HIGH,CRITICAL --exit-code 1 --tf-vars ${TF_DIR}/terraform.tfvars --tf-exclude-downloaded-modules --skip-dirs ${TF_DIR}/.external_modules --skip-dirs ${TF_DIR}/.terraform --skip-dirs .terraform-ci --format sarif --output trivy.sarif ${TF_DIR}"
+run = """
+TFVARS_FLAG=""
+if [ -f "${TF_DIR}/terraform.tfvars" ]; then
+  TFVARS_FLAG="--tf-vars ${TF_DIR}/terraform.tfvars"
+fi
+trivy config --severity HIGH,CRITICAL --exit-code 1 \
+  $TFVARS_FLAG \
+  --tf-exclude-downloaded-modules \
+  --skip-dirs ${TF_DIR}/.external_modules \
+  --skip-dirs ${TF_DIR}/.terraform \
+  --skip-dirs .terraform-ci \
+  --format sarif --output trivy.sarif \
+  ${TF_DIR}
+"""
 
 [tasks."gitleaks:scan"]
 description = "Scans repo for secrets"

@@ -37,3 +37,18 @@ output "cluster_oidc_issuer_url" {
   description = "OIDC issuer URL for the cluster."
   value       = module.this.cluster_oidc_issuer_url
 }
+
+output "cluster_certificate_authority_data" {
+  description = "Base64 encoded certificate data for the cluster CA."
+  value       = module.this.cluster_certificate_authority_data
+}
+
+output "eks_managed_node_groups" {
+  description = "Map of EKS managed node group attributes (ARN, ID, status)."
+  value       = module.this.eks_managed_node_groups
+}
+
+output "eks_managed_node_groups_autoscaling_group_names" {
+  description = "List of ASG names from all EKS managed node groups."
+  value       = module.this.eks_managed_node_groups_autoscaling_group_names
+}

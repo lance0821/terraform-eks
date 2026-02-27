@@ -29,6 +29,7 @@ module "aws_load_balancer_controller" {
     { name = "region", value = var.region },
     { name = "vpcId", value = var.vpc_id },
   ]
+  set_sensitive = lookup(local.alb, "set_sensitive", [])
 
   create_irsa_role                            = true
   irsa_role_name_prefix                       = "${var.cluster_name}-alb-controller"
@@ -36,6 +37,8 @@ module "aws_load_balancer_controller" {
   irsa_annotation_key                         = "serviceAccount"
   oidc_provider_arn                           = var.oidc_provider_arn
   irsa_attach_load_balancer_controller_policy = true
+
+  lifecycle_create_before_destroy = try(local.alb.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -63,7 +66,10 @@ module "metrics_server" {
   chart_version = local.metrics.chart_version
   namespace     = local.metrics.namespace
 
-  values = lookup(local.metrics, "values", [])
+  values        = lookup(local.metrics, "values", [])
+  set_sensitive = lookup(local.metrics, "set_sensitive", [])
+
+  lifecycle_create_before_destroy = try(local.metrics.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -92,7 +98,8 @@ module "external_dns" {
   chart_version = local.extdns.chart_version
   namespace     = local.extdns.namespace
 
-  values = lookup(local.extdns, "values", [])
+  values        = lookup(local.extdns, "values", [])
+  set_sensitive = lookup(local.extdns, "set_sensitive", [])
 
   set = [
     { name = "provider.name", value = "aws" },
@@ -106,6 +113,8 @@ module "external_dns" {
   irsa_annotation_key             = "serviceAccount"
   oidc_provider_arn               = var.oidc_provider_arn
   irsa_attach_external_dns_policy = true
+
+  lifecycle_create_before_destroy = try(local.extdns.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -146,6 +155,9 @@ module "cert_manager" {
   irsa_annotation_key             = "serviceAccount"
   oidc_provider_arn               = var.oidc_provider_arn
   irsa_attach_cert_manager_policy = true
+  set_sensitive                   = lookup(local.certmgr, "set_sensitive", [])
+
+  lifecycle_create_before_destroy = try(local.certmgr.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -193,6 +205,8 @@ module "kube_prometheus_stack" {
     })],
     lookup(local.promstack, "values", [])
   )
+  set_sensitive = lookup(local.promstack, "set_sensitive", [])
+  lifecycle_create_before_destroy = try(local.promstack.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }
@@ -240,6 +254,7 @@ module "karpenter" {
     })],
     lookup(local.karpenter, "values", [])
   )
+  set_sensitive = lookup(local.karpenter, "set_sensitive", [])
 
   # IRSA handles the base role; callers must supply the Karpenter-specific
   # policies via irsa_policy_arns in the karpenter override map.
@@ -250,6 +265,9 @@ module "karpenter" {
   oidc_provider_arn         = var.oidc_provider_arn
   irsa_policy_arns          = lookup(local.karpenter, "irsa_policy_arns", {})
 
+  lifecycle_create_before_destroy = try(local.karpenter.lifecycle_create_before_destroy, false)
+
+
   tags = var.tags
 }
 
@@ -257,6 +275,39 @@ check "karpenter_requires_irsa_policies" {
   assert {
     condition     = !var.enable_karpenter || length(lookup(local.karpenter, "irsa_policy_arns", {})) > 0
     error_message = "When enabling Karpenter, you must provide at least one policy ARN via the `karpenter.irsa_policy_arns` variable."
+  }
+}
+
+check "external_secrets_requires_irsa_policies" {
+  assert {
+    condition = (
+      !try(var.helm_releases["external_secrets"].create, false) ||
+      !try(var.helm_releases["external_secrets"].create_irsa_role, false) ||
+      length(try(var.helm_releases["external_secrets"].irsa_policy_arns, {})) > 0
+    )
+    error_message = "external_secrets has create_irsa_role = true but no irsa_policy_arns. ESO needs Secrets Manager or SSM policies to function."
+  }
+}
+
+check "velero_requires_irsa_policies" {
+  assert {
+    condition = (
+      !try(var.helm_releases["velero"].create, false) ||
+      !try(var.helm_releases["velero"].create_irsa_role, false) ||
+      length(try(var.helm_releases["velero"].irsa_policy_arns, {})) > 0
+    )
+    error_message = "velero has create_irsa_role = true but no irsa_policy_arns. Velero needs S3 + EBS snapshot policies to function."
+  }
+}
+
+check "fluent_bit_requires_irsa_policies" {
+  assert {
+    condition = (
+      !try(var.helm_releases["fluent_bit"].create, false) ||
+      !try(var.helm_releases["fluent_bit"].create_irsa_role, false) ||
+      length(try(var.helm_releases["fluent_bit"].irsa_policy_arns, {})) > 0
+    )
+    error_message = "fluent_bit has create_irsa_role = true but no irsa_policy_arns. Fluent Bit needs CloudWatch, S3, or OpenSearch policies to function."
   }
 }
 
@@ -285,7 +336,10 @@ module "argocd" {
   create_namespace = true
   timeout          = 600
 
-  values = lookup(local.argocd, "values", [])
+  values        = lookup(local.argocd, "values", [])
+  set_sensitive = lookup(local.argocd, "set_sensitive", [])
+
+  lifecycle_create_before_destroy = try(local.argocd.lifecycle_create_before_destroy, false)
 
   tags = var.tags
 }

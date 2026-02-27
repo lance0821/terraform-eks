@@ -105,15 +105,30 @@ output "fluent_bit_cloudwatch_policy_arn" {
 
 output "efs_file_system_id" {
   description = "EFS file system ID (if created)."
-  value       = var.enable_efs_filesystem ? aws_efs_file_system.this[0].id : null
+  value       = module.efs.file_system_id
 }
 
 output "efs_security_group_id" {
   description = "Security group ID attached to EFS mount targets (if created)."
-  value       = var.enable_efs_filesystem ? aws_security_group.efs[0].id : null
+  value       = module.efs.security_group_id
 }
 
 output "efs_mount_target_ids" {
   description = "Map of subnet ID to EFS mount target ID (if created)."
-  value       = var.enable_efs_filesystem ? { for subnet_id, mt in aws_efs_mount_target.this : subnet_id => mt.id } : {}
+  value       = module.efs.mount_target_ids
+}
+
+output "ebs_csi_irsa_role_arn" {
+  description = "IRSA role ARN for the EBS CSI driver (if created)."
+  value       = var.enable_ebs_csi_irsa ? module.ebs_csi_irsa[0].arn : null
+}
+
+output "nat_public_ips" {
+  description = "NAT gateway public IPs (for external allowlisting)."
+  value       = module.vpc.nat_public_ips
+}
+
+output "node_security_group_id" {
+  description = "Security group ID attached to EKS managed node groups."
+  value       = module.eks.node_security_group_id
 }

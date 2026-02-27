@@ -160,7 +160,7 @@ To initialize with the S3 backend (equivalent to `mise run terraform:init`), pas
 
 ```bash
 AWS_PROFILE=dev terraform -chdir=infra init -reconfigure -upgrade \
-	-backend-config="bucket=tfstate-llewandowski" \
+	-backend-config="bucket=$TF_STATE_BUCKET" \
 	-backend-config="key=terraform-labs/dev/terraform.tfstate" \
 	-backend-config="region=us-east-1" \
 	-backend-config="encrypt=true" \
@@ -173,7 +173,7 @@ Or export once per shell session:
 export AWS_PROFILE=dev
 ```
 
-Before your first apply, review `infra/terraform.tfvars` and customize `extra_tags` (for example `Owner` and `Team`) to match your organization.
+Before your first apply, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and edit values for your environment (for example `extra_tags` like Owner and Team).
 
 ### Worker node cost optimization (Spot)
 
@@ -431,7 +431,7 @@ Set these GitHub repository or environment variables before running deploy/destr
 - `TF_STATE_PREFIX` (optional): Prefix under the bucket. Defaults to GitHub repository name.
 - `AWS_ROLE_TO_ASSUME` (required): IAM role ARN for OIDC auth.
 
-For this repository, set `TF_STATE_BUCKET=tfstate-llewandowski`.
+Set `TF_STATE_BUCKET` in your `.env` file (see `.env.example`).
 
 Locking is configured with S3 native lockfiles (`use_lockfile=true`), so no DynamoDB table is required.
 
@@ -451,8 +451,42 @@ Where `<prefix>` is `TF_STATE_PREFIX` if set, otherwise the GitHub repo name (fo
 For local `mise run terraform:init`:
 
 - Init always configures the S3 backend.
-- Defaults are set in `mise.toml` (`TF_STATE_BUCKET=tfstate-llewandowski`, `TF_STATE_PREFIX=terraform-labs`, `TF_STATE_ENV=dev`).
+- Defaults are set in `mise.toml` (TF_STATE_BUCKET comes from your `.env`; TF_STATE_PREFIX=terraform-labs; TF_STATE_ENV=dev).
 - Override `TF_STATE_PREFIX` or `TF_STATE_ENV` per workspace/environment as needed.
+
+### Architecture
+
+See [docs/architecture.md](docs/architecture.md) for the module dependency diagram and layer responsibilities.
+
+### Production hardening checklist
+
+Before deploying to staging or production:
+
+1. Set `endpoint_public_access = false` (already the default) or restrict with `cluster_endpoint_public_access_cidrs`
+2. Set `single_nat_gateway = false` and `one_nat_gateway_per_az = true`
+3. Set `enable_cluster_creator_admin_permissions = false` and configure `eks_access_entries` for team access
+4. Verify `cluster_enabled_log_types` includes all 5 log types (default)
+5. Verify `create_kms_key = true` for secrets encryption at rest (default)
+6. Review node group instance types and sizes for production workloads
+7. Enable Velero backups (`helm_releases.velero.create = true`)
+8. Enable Fluent Bit log shipping (`helm_releases.fluent_bit.create = true`)
+9. Use `infra/prod.tfvars.example` as your starting template
+
+### Estimated monthly cost (us-east-1)
+
+| Component | Dev (defaults) | Prod (HA) |
+|-----------|---------------|-----------|
+| EKS control plane | $73 | $73 |
+| NAT Gateway (1 vs 3) | $32 + data | $96 + data |
+| t3.medium On-Demand (1) | $30 | $30 |
+| t3.medium Spot (2) | ~$18 | ~$18 |
+| CloudWatch Logs (control plane) | $5-15 | $5-15 |
+| KMS key | $1 | $1 |
+| EBS gp3 (default 20GB per node) | $5 | $15 |
+| ALB (if LoadBalancer created) | $16 + LCU | $16 + LCU |
+| **Approximate total** | **~$180-200** | **~$270-300** |
+
+Costs exclude data transfer, EFS, Route 53, and additional workload-specific resources. Spot savings are typically 60-80% vs On-Demand. Use [AWS Pricing Calculator](https://calculator.aws/) for exact estimates.
 
 ### Template bootstrap for new repos
 
@@ -462,7 +496,7 @@ Use the bootstrap script to configure AWS OIDC trust + GitHub environments/varia
 ./scripts/bootstrap-template-repo.sh \
 	--repo <owner/new-repo> \
 	--aws-profile dev \
-	--state-bucket tfstate-llewandowski
+	--state-bucket <YOUR_STATE_BUCKET>
 ```
 
 Defaults:
@@ -473,10 +507,4 @@ Defaults:
 
 After bootstrap, run the `Deploy (Terraform Apply)` workflow manually with `environment=dev` and `confirm=APPLY`.
 
-### Re-enable strict TFLint rules
 
-Re-enable these rules in `.tflint.hcl` when the scaffold grows into real infrastructure:
-
-- `terraform_unused_declarations`: re-enable once locals/variables are actively consumed by resources or modules.
-- `terraform_unused_required_providers`: re-enable once `required_providers` only lists providers used in code.
-- Run `mise run check` after re-enabling to verify no regressions.

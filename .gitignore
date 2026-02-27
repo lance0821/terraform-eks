@@ -9,6 +9,10 @@
 tfplan
 **/.terraform-pin/
 
+# Terraform variable files (use .tfvars.example as template)
+*.tfvars
+!*.tfvars.example
+
 *.sarif
 *.sarif/
 trivy.sarif

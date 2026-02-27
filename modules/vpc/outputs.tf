@@ -17,3 +17,8 @@ output "vpc_cidr_block" {
   description = "CIDR block of the created VPC."
   value       = module.this.vpc_cidr_block
 }
+
+output "nat_public_ips" {
+  description = "List of public Elastic IPs created for NAT gateways (useful for allowlisting)."
+  value       = module.this.nat_public_ips
+}

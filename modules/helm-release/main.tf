@@ -39,38 +39,33 @@ module "irsa" {
 ################################################################################
 
 locals {
-  # Auto-inject the IRSA role ARN annotation into the chart's service account.
-  # The caller controls the Helm value path via irsa_annotation_key, since
-  # charts put the SA at different paths:
-  #   "serviceAccount"                 → most charts (default)
-  #   "server.serviceAccount"          → ArgoCD server
-  #   "controller.serviceAccount"      → AWS LB controller, ingress-nginx
-  #   "prometheus.serviceAccount"      → kube-prometheus-stack
+  # Every object MUST have the same shape {name, value, type} so concat()
+  # produces a homogeneous list.  type = null is the safe default.
   irsa_set = var.create && var.create_irsa_role ? [
     {
       name  = "${var.irsa_annotation_key}.create"
       value = "true"
+      type  = null
     },
     {
       name  = "${var.irsa_annotation_key}.name"
       value = var.irsa_service_account_name
+      type  = null
     },
     {
       name  = "${var.irsa_annotation_key}.annotations.eks\\.amazonaws\\.com/role-arn"
       value = module.irsa[0].arn
+      type  = null
     },
   ] : []
 
-  # Normalize caller-provided set values to strings.
+  # Normalize caller-provided set values.
+  # try(tostring, jsonencode) prevents panic when value is a list/map.
   normalized_set = [
-    for set_item in var.set :
-    try(set_item.type, null) != null ? {
+    for set_item in var.set : {
       name  = set_item.name
-      value = tostring(set_item.value)
-      type  = set_item.type
-      } : {
-      name  = set_item.name
-      value = tostring(set_item.value)
+      value = try(tostring(set_item.value), jsonencode(set_item.value))
+      type  = try(set_item.type, null)
     }
   ]
 
@@ -114,4 +109,8 @@ resource "helm_release" "this" {
   set = local.merged_set
 
   set_sensitive = var.set_sensitive
+
+  lifecycle {
+    create_before_destroy = var.lifecycle_create_before_destroy
+  }
 }

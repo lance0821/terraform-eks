@@ -10,11 +10,35 @@ vpc_cidr           = "10.0.0.0/16"
 az_count           = 3
 kubernetes_version = "1.31"
 
+# ── VPC / NAT ───────────────────────────────────────────────────────────
+# For dev: single NAT (saves ~$30/mo per extra gateway).
+# For staging/prod: set single_nat_gateway = false, one_nat_gateway_per_az = true.
+single_nat_gateway     = true
+one_nat_gateway_per_az = false
+
+# ── EKS Security ────────────────────────────────────────────────────────
+# Public endpoint OFF by default. Enable and restrict by CIDR for remote access.
+endpoint_public_access               = false
+endpoint_private_access              = true
+cluster_endpoint_public_access_cidrs = [] # e.g. ["203.0.113.0/24"]
+
+# All control plane logs enabled by default (SOC2/PCI compliance).
+cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
+# KMS encryption for Kubernetes secrets at rest.
+create_kms_key = true
+
+# ── EBS CSI IRSA ────────────────────────────────────────────────────────
+# Dedicated IRSA role auto-wired into the aws-ebs-csi-driver addon.
+enable_ebs_csi_irsa = true
+
 enable_efs_filesystem = false
 efs_encrypted         = true
 efs_performance_mode  = "generalPurpose"
 efs_throughput_mode   = "bursting"
 
+# Set to false once team access entries are configured.
+# The EKS module defaults to false — this explicit true is for initial bootstrap only.
 enable_cluster_creator_admin_permissions = true
 
 # Optional: grant additional IAM principals cluster access via EKS access entries.
@@ -122,6 +146,7 @@ helm_releases = {
 
     # Attach least-privilege custom policies that allow ESO to read from
     # AWS Secrets Manager / SSM Parameter Store.
+    # Replace <ACCOUNT_ID> below
     irsa_policy_arns = {
       secrets_manager_read = "arn:aws:iam::<ACCOUNT_ID>:policy/ESOSecretsManagerRead"
       ssm_parameter_read   = "arn:aws:iam::<ACCOUNT_ID>:policy/ESOSsmParameterRead"
@@ -197,6 +222,7 @@ helm_releases = {
     irsa_annotation_key       = "serviceAccount.server"
 
     # Attach least-privilege custom policies for backup object storage and snapshots.
+    # Replace <ACCOUNT_ID> below
     irsa_policy_arns = {
       velero_backup_restore = "arn:aws:iam::<ACCOUNT_ID>:policy/VeleroS3EbsSnapshots"
     }

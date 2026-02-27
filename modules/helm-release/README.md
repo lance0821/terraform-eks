@@ -36,6 +36,16 @@ module "metrics_server" {
   }
 }
 ```
+### ArgoCD coexistence
+
+If ArgoCD manages drift on charts also deployed by this module, set these
+on the addon override map to prevent Terraform from reverting ArgoCD's changes:
+
+    reuse_values  = true
+    reset_values  = false
+
+This tells the Helm provider to merge new values on top of existing release
+values rather than resetting to the chart defaults.
 
 ### IRSA-enabled usage
 

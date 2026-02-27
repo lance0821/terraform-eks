@@ -59,7 +59,7 @@ variable "values" {
 
 # Helm provider 3.x: set is a list of objects with name/value/type keys.
 variable "set" {
-  description = "List of value objects to pass to the chart. Each object has `name` (string), `value` (string), and optional `type` (string)."
+  description = "List of value objects to pass to the chart. Each object has `name` (string), `value` (any, coerced to string), and optional `type` (string). Non-scalar values are JSON-encoded automatically."
   type = list(object({
     name  = string
     value = any
@@ -72,7 +72,7 @@ variable "set_sensitive" {
   description = "List of sensitive value objects. Same shape as `set` but values are masked in plan output."
   type = list(object({
     name  = string
-    value = string
+    value = any
     type  = optional(string)
   }))
   default = []
@@ -270,4 +270,11 @@ variable "tags" {
   description = "Tags applied to all IAM resources."
   type        = map(string)
   default     = {}
+}
+
+
+variable "lifecycle_create_before_destroy" {
+  description = "Create the new release before destroying the old one. Enables zero-downtime upgrades for critical addons."
+  type        = bool
+  default     = false
 }

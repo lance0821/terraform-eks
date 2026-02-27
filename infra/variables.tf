@@ -71,14 +71,28 @@ variable "kubernetes_version" {
   }
 }
 
+
 variable "enable_cluster_creator_admin_permissions" {
   type        = bool
   description = "Whether the Terraform caller identity receives EKS cluster admin access."
   default     = true
-}
 
+  validation {
+    condition     = !(var.enable_cluster_creator_admin_permissions && var.environment == "prod")
+    error_message = "enable_cluster_creator_admin_permissions must be false in prod. Configure eks_access_entries for team access instead."
+  }
+}
 variable "eks_access_entries" {
-  type        = any
+  type = map(object({
+    principal_arn = string
+    policy_associations = optional(map(object({
+      policy_arn = string
+      access_scope = object({
+        type       = string
+        namespaces = optional(list(string))
+      })
+    })), {})
+  }))
   description = "Map of EKS access entries to grant IAM principals cluster or namespace-scoped access."
   default     = {}
 }
@@ -92,6 +106,67 @@ variable "eks_managed_node_groups" {
 variable "eks_addons" {
   type        = any
   description = "EKS addons map passed to EKS module."
+  default     = {}
+}
+
+variable "endpoint_public_access" {
+  type        = bool
+  description = "Whether the Kubernetes API server endpoint is publicly accessible."
+  default     = false
+}
+
+variable "endpoint_private_access" {
+  type        = bool
+  description = "Whether the Kubernetes API server endpoint is privately accessible."
+  default     = true
+}
+
+variable "cluster_endpoint_public_access_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks allowed to access the public API endpoint."
+  default     = []
+}
+
+variable "cluster_enabled_log_types" {
+  type        = list(string)
+  description = "List of control plane log types to enable."
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "create_kms_key" {
+  type        = bool
+  description = "Create a KMS key for cluster secrets encryption."
+  default     = true
+}
+
+variable "node_security_group_additional_rules" {
+  type = map(object({
+    description                  = optional(string)
+    from_port                    = number
+    to_port                      = number
+    protocol                     = string
+    type                         = string
+    cidr_blocks                  = optional(list(string))
+    source_security_group_id     = optional(string)
+    source_cluster_security_group = optional(bool)
+    self                         = optional(bool)
+  }))
+  description = "Additional security group rules for EKS node groups."
+  default     = {}
+}
+
+variable "cluster_security_group_additional_rules" {
+  type = map(object({
+    description                  = optional(string)
+    from_port                    = number
+    to_port                      = number
+    protocol                     = string
+    type                         = string
+    cidr_blocks                  = optional(list(string))
+    source_security_group_id     = optional(string)
+    self                         = optional(bool)
+  }))
+  description = "Additional security group rules for the EKS cluster."
   default     = {}
 }
 
@@ -203,6 +278,12 @@ variable "enable_efs_filesystem" {
   default     = false
 }
 
+variable "enable_ebs_csi_irsa" {
+  type        = bool
+  description = "Create a dedicated IRSA role for the EBS CSI driver addon. When true, the role ARN is automatically wired into eks_addons['aws-ebs-csi-driver']."
+  default     = true
+}
+
 variable "efs_encrypted" {
   type        = bool
   description = "Enable encryption at rest for EFS filesystem."
@@ -233,4 +314,16 @@ variable "efs_subnet_ids" {
   type        = list(string)
   description = "Optional subnet IDs for EFS mount targets. If empty, uses VPC private subnets."
   default     = []
+}
+
+variable "single_nat_gateway" {
+  type        = bool
+  description = "Use a single NAT gateway (cost saving for dev, SPOF in prod). Mutually exclusive with one_nat_gateway_per_az."
+  default     = true
+}
+
+variable "one_nat_gateway_per_az" {
+  type        = bool
+  description = "Deploy one NAT gateway per AZ for HA. Mutually exclusive with single_nat_gateway."
+  default     = false
 }
