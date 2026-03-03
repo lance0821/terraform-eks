@@ -316,6 +316,50 @@ variable "efs_subnet_ids" {
   default     = []
 }
 
+variable "efs_kms_key_id" {
+  type        = string
+  description = "ARN of a customer-managed KMS key for EFS encryption. If null, uses the AWS-managed EFS key."
+  default     = null
+}
+
+variable "efs_provisioned_throughput_in_mibps" {
+  type        = number
+  description = "Provisioned throughput in MiB/s. Only applies when efs_throughput_mode = provisioned."
+  default     = null
+  validation {
+    condition     = var.efs_provisioned_throughput_in_mibps == null || var.efs_provisioned_throughput_in_mibps > 0
+    error_message = "efs_provisioned_throughput_in_mibps must be positive when set."
+  }
+}
+
+variable "efs_lifecycle_policy" {
+  type = object({
+    transition_to_ia                    = optional(string, "AFTER_30_DAYS")
+    transition_to_primary_storage_class = optional(string, "AFTER_1_ACCESS")
+  })
+  description = "EFS lifecycle policy for transitioning files to Infrequent Access (IA)."
+  default = {
+    transition_to_ia                    = "AFTER_30_DAYS"
+    transition_to_primary_storage_class = "AFTER_1_ACCESS"
+  }
+  validation {
+    condition = (
+      var.efs_lifecycle_policy == null ||
+      contains(
+        ["AFTER_7_DAYS", "AFTER_14_DAYS", "AFTER_30_DAYS", "AFTER_60_DAYS", "AFTER_90_DAYS"],
+        var.efs_lifecycle_policy.transition_to_ia
+      )
+    )
+    error_message = "transition_to_ia must be one of: AFTER_7_DAYS, AFTER_14_DAYS, AFTER_30_DAYS, AFTER_60_DAYS, AFTER_90_DAYS."
+  }
+}
+
+variable "enable_efs_backup" {
+  type        = bool
+  description = "Enable AWS Backup automatic backups for the EFS filesystem."
+  default     = true
+}
+
 variable "single_nat_gateway" {
   type        = bool
   description = "Use a single NAT gateway (cost saving for dev, SPOF in prod). Mutually exclusive with one_nat_gateway_per_az."

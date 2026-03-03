@@ -118,6 +118,16 @@ output "efs_mount_target_ids" {
   value       = module.efs.mount_target_ids
 }
 
+output "efs_file_system_arn" {
+  description = "EFS file system ARN (if created)."
+  value       = module.efs.file_system_arn
+}
+
+output "efs_dns_name" {
+  description = "EFS DNS name (if created)."
+  value       = module.efs.file_system_dns_name
+}
+
 output "ebs_csi_irsa_role_arn" {
   description = "IRSA role ARN for the EBS CSI driver (if created)."
   value       = var.enable_ebs_csi_irsa ? module.ebs_csi_irsa[0].arn : null

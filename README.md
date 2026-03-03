@@ -458,6 +458,14 @@ For local `mise run terraform:init`:
 
 See [docs/architecture.md](docs/architecture.md) for the module dependency diagram and layer responsibilities.
 
+### Module design
+
+This repo uses thin wrapper modules around community `terraform-aws-modules/*`
+packages. The wrappers add input validation, security-hardened defaults, and a
+consistent interface — see [docs/architecture.md](docs/architecture.md) for the
+full rationale. The general rule: wrap when you add guardrails, call upstream
+directly when you don't.
+
 ### Production hardening checklist
 
 Before deploying to staging or production:
