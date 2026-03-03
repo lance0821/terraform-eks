@@ -112,4 +112,3 @@ module (or raw AWS resources for EFS). The wrappers exist for three reasons:
 **Rule of thumb:** We wrap when we add validation, defaults, or interface
 simplification. If a wrapper would be pure passthrough with zero added logic,
 call the upstream module directly from `infra/`.
-

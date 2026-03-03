@@ -9,8 +9,8 @@ variables {
   vpc_cidr     = "10.0.0.0/16"
 
   enable_cluster_creator_admin_permissions = true
-  one_nat_gateway_per_az                  = false
-  single_nat_gateway                      = true
+  one_nat_gateway_per_az                   = false
+  single_nat_gateway                       = true
 }
 
 run "prod_rejects_creator_admin" {

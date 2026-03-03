@@ -1,7 +1,7 @@
 # Tests that the helm-release module handles mixed set types without panic.
 
 variables {
-  create           = false  # Don't actually deploy — just validate plan
+  create           = false # Don't actually deploy — just validate plan
   name             = "test-release"
   chart            = "test-chart"
   chart_version    = "1.0.0"

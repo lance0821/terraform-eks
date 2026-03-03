@@ -141,15 +141,15 @@ variable "create_kms_key" {
 
 variable "node_security_group_additional_rules" {
   type = map(object({
-    description                  = optional(string)
-    from_port                    = number
-    to_port                      = number
-    protocol                     = string
-    type                         = string
-    cidr_blocks                  = optional(list(string))
-    source_security_group_id     = optional(string)
+    description                   = optional(string)
+    from_port                     = number
+    to_port                       = number
+    protocol                      = string
+    type                          = string
+    cidr_blocks                   = optional(list(string))
+    source_security_group_id      = optional(string)
     source_cluster_security_group = optional(bool)
-    self                         = optional(bool)
+    self                          = optional(bool)
   }))
   description = "Additional security group rules for EKS node groups."
   default     = {}
@@ -157,14 +157,14 @@ variable "node_security_group_additional_rules" {
 
 variable "cluster_security_group_additional_rules" {
   type = map(object({
-    description                  = optional(string)
-    from_port                    = number
-    to_port                      = number
-    protocol                     = string
-    type                         = string
-    cidr_blocks                  = optional(list(string))
-    source_security_group_id     = optional(string)
-    self                         = optional(bool)
+    description              = optional(string)
+    from_port                = number
+    to_port                  = number
+    protocol                 = string
+    type                     = string
+    cidr_blocks              = optional(list(string))
+    source_security_group_id = optional(string)
+    self                     = optional(bool)
   }))
   description = "Additional security group rules for the EKS cluster."
   default     = {}

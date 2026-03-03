@@ -14,10 +14,10 @@ module "efs" {
   performance_mode = var.efs_performance_mode
   throughput_mode  = var.efs_throughput_mode
 
-  kms_key_id                     = var.efs_kms_key_id
+  kms_key_id                      = var.efs_kms_key_id
   provisioned_throughput_in_mibps = var.efs_provisioned_throughput_in_mibps
-  lifecycle_policy               = var.efs_lifecycle_policy
-  enable_backup_policy           = var.enable_efs_backup
+  lifecycle_policy                = var.efs_lifecycle_policy
+  enable_backup_policy            = var.enable_efs_backup
 
   tags = local.tags
 }

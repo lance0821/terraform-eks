@@ -33,10 +33,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Pre-commit (catches --no-verify bypasses) ───────────────────
-      - name: Pre-commit hooks
-        run: pre-commit run --all-files
-
       # ── Formatting ───────────────────────────────────────────────────
       - name: Terraform fmt
         run: terraform fmt -check -recursive

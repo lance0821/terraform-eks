@@ -41,7 +41,7 @@ module "vpc" {
 }
 
 module "eks" {
-  source = "../modules/eks"
+  source     = "../modules/eks"
   depends_on = [terraform_data.prod_guardrails]
 
   name               = local.name
@@ -162,4 +162,3 @@ module "eks_addons" {
 
   tags = local.tags
 }
-

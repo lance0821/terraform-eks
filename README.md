@@ -514,5 +514,3 @@ Defaults:
 - State prefix: repository name
 
 After bootstrap, run the `Deploy (Terraform Apply)` workflow manually with `environment=dev` and `confirm=APPLY`.
-
-
