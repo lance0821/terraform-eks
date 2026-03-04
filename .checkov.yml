@@ -2,6 +2,8 @@ quiet: true
 framework:
   - terraform
 download-external-modules: true
+skip-check:
+  - CKV_TF_1 # Registry module sources are version-pinned but not commit-hash pinned; expected for upstream modules.
 
 # Best-practice suppression workflow:
 # 1) Prefer fixing findings over suppressing checks.

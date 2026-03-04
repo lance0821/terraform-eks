@@ -7,8 +7,19 @@
 *.tfstate.*
 *.tfplan
 tfplan
+**/.terraform-pin/
+
+# Terraform variable files (use .tfvars.example as template)
+*.tfvars
+!*.tfvars.example
+
+*.sarif
+*.sarif/
 trivy.sarif
 checkov.sarif
+checkov.sarif/
+checkov-all.sarif
+checkov-all.sarif/
 
 *.tfvars.json
 

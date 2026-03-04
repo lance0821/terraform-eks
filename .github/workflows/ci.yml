@@ -1,4 +1,4 @@
-name: CI (Terraform + Security)
+name: CI
 
 on:
   pull_request:
@@ -27,25 +27,75 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Setup mise
+      # mise installs tool versions from mise.toml [tools] — nothing else.
+      - name: Setup tools
         uses: jdx/mise-action@v3.6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run CI checks
-        run: mise run check:ci
+      # ── Formatting ───────────────────────────────────────────────────
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
 
-      - name: Upload Trivy SARIF
-        if: always() && hashFiles('trivy.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4.32.4
-        with:
-          sarif_file: trivy.sarif
+      # ── Validate (infra) ─────────────────────────────────────────────
+      - name: Terraform validate (infra)
+        run: |
+          mkdir -p .terraform.d/plugin-cache
+          TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
+            terraform -chdir=infra init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=infra validate
+
+      # ── TFLint ───────────────────────────────────────────────────────
+      - name: TFLint init
+        run: tflint --init --config=.tflint.hcl
+
+      - name: TFLint (infra)
+        run: tflint --chdir=infra --config=../.tflint.hcl --call-module-type=none
+
+      - name: TFLint (modules)
+        run: |
+          for d in modules/*/; do
+            if ls "$d"/*.tf >/dev/null 2>&1; then
+              echo "::group::$d"
+              TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
+                terraform -chdir="$d" init -backend=false -input=false -lockfile=readonly >/dev/null
+              tflint --chdir="$d" --config=../../.tflint.hcl
+              echo "::endgroup::"
+            fi
+          done
+
+      # ── Terraform tests (from repo root) ─────────────────────────────
+      - name: Terraform tests
+        run: |
+          set -euo pipefail
+
+          echo "::group::Pre-initializing modules for tests"
+          for d in modules/*/; do
+            if ls "$d"/*.tf >/dev/null 2>&1; then
+              TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
+                terraform -chdir="$d" init -backend=false -input=false -lockfile=readonly >/dev/null || true
+            fi
+          done
+          echo "::endgroup::"
+
+          terraform test
+
+      # ── Checkov ──────────────────────────────────────────────────────
+      - name: Checkov scan
+        run: |
+          checkov --config-file .checkov.yml -d infra \
+            --download-external-modules false \
+            -o sarif --output-file-path checkov.sarif
 
       - name: Upload Checkov SARIF
         if: always() && hashFiles('checkov.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4.32.4
         with:
           sarif_file: checkov.sarif
+
+      # ── Gitleaks ─────────────────────────────────────────────────────
+      - name: Gitleaks
+        run: gitleaks detect --redact --no-git --config .gitleaks.toml
 
   actionlint:
     runs-on: ubuntu-24.04

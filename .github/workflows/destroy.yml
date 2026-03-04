@@ -76,7 +76,7 @@ jobs:
           terraform -chdir=infra init -input=false -no-color "${BACKEND_ARGS[@]}"
 
       - name: Terraform Plan (destroy)
-        run: terraform -chdir=infra plan -destroy -input=false -no-color
+        run: terraform -chdir=infra plan -destroy -input=false -no-color -out=tfplan
 
       - name: Terraform Destroy
-        run: terraform -chdir=infra destroy -input=false -auto-approve -no-color
+        run: terraform -chdir=infra destroy -input=false -no-color tfplan

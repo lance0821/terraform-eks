@@ -76,7 +76,7 @@ jobs:
           terraform -chdir=infra init -input=false -no-color "${BACKEND_ARGS[@]}"
 
       - name: Terraform Plan
-        run: terraform -chdir=infra plan -input=false -no-color
+        run: terraform -chdir=infra plan -input=false -no-color -out=tfplan
 
       - name: Terraform Apply
-        run: terraform -chdir=infra apply -input=false -auto-approve -no-color
+        run: terraform -chdir=infra apply -input=false -no-color tfplan

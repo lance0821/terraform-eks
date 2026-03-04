@@ -4,7 +4,12 @@ title = "terraform-labs gitleaks config"
 useDefault = true
 
 [[allowlists]]
-description = "Ignore vendored external terraform modules cache"
+description = "Ignore generated/downloaded Terraform module caches"
 paths = [
+  '''^\.external_modules/''',
   '''^infra/\.external_modules/''',
+  '''^infra/\.terraform/''',
+  '''^infra/\.terraform-ci/''',
+  '''^modules/[^/]+/\.terraform/''',
+  '''^modules/[^/]+/\.terraform-ci/''',
 ]

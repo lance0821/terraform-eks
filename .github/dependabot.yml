@@ -8,3 +8,48 @@ updates:
     labels:
       - dependencies
       - github-actions
+
+  - package-ecosystem: terraform
+    directory: "/infra"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: "/modules/eks"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: "/modules/vpc"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: "/modules/helm-release"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - terraform
+
+  - package-ecosystem: terraform
+    directory: "/modules/eks-addons"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - terraform

@@ -1,0 +1,11 @@
+serviceAccount:
+  create: true
+  name: fluent-bit
+
+s3:
+  enabled: true
+  region: us-east-1 # change to your AWS region
+  bucket: my-eks-logs-bucket # change to your destination bucket
+  totalFileSize: 50M
+  uploadTimeout: 1m
+  s3KeyFormat: /fluent-bit/$TAG/%Y/%m/%d/%H/%M/%S

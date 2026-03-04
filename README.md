@@ -42,6 +42,16 @@ rm -rf ~/.aws/sso/cache ~/.aws/cli/cache
 aws sso login --profile dev --use-device-code
 ```
 
+- If Terraform reports `No valid credential sources found`, set the profile explicitly and retry:
+
+```bash
+export AWS_PROFILE=dev
+aws sts get-caller-identity --profile dev
+AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
+```
+
+This `-backend=false` init is for provider/module initialization only (no remote state backend configuration).
+
 `mise.toml` loads `.env` via `_.file = ".env"`, so tasks pick up `AWS_PROFILE`/`AWS_REGION` automatically.
 
 ### One-time shell setup
@@ -100,6 +110,8 @@ If you have not set up your local AWS environment yet, follow `Codespaces / AWS 
 
 For remote containers/Codespaces, use `--use-device-code` for SSO login and see the troubleshooting note above if auth fails.
 
+For direct AWS CLI/Terraform commands outside `mise run`, prefer an explicit profile (for example `AWS_PROFILE=dev`).
+
 Verify active AWS credentials/profile with the task in `mise.toml`:
 
 ```bash
@@ -121,6 +133,9 @@ Run tasks defined in `mise.toml`:
 mise run terraform:init
 mise run terraform:plan
 mise run terraform:apply
+mise run kubeconfig:update
+mise run kubeconfig:whoami
+mise run kubeconfig:placement
 mise run terraform:destroy
 mise run terraform:validate
 mise run terraform:validate-ci
@@ -130,6 +145,264 @@ mise run checkov:scan-all
 mise run check
 mise run check:ci
 ```
+
+`check:ci` runs several tasks in parallel. The `tflint:modules` task runs `terraform init` inside each module directory so TFLint can resolve module sources from that module's local `.terraform` state.
+
+If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit.
+
+For provider/module initialization only (no backend):
+
+```bash
+AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
+```
+
+To initialize with the S3 backend (equivalent to `mise run terraform:init`), pass backend config explicitly:
+
+```bash
+AWS_PROFILE=dev terraform -chdir=infra init -reconfigure -upgrade \
+	-backend-config="bucket=$TF_STATE_BUCKET" \
+	-backend-config="key=terraform-labs/dev/terraform.tfstate" \
+	-backend-config="region=us-east-1" \
+	-backend-config="encrypt=true" \
+	-backend-config="use_lockfile=true"
+```
+
+Or export once per shell session:
+
+```bash
+export AWS_PROFILE=dev
+```
+
+Before your first apply, copy `infra/terraform.tfvars.example` to `infra/terraform.tfvars` and edit values for your environment (for example `extra_tags` like Owner and Team).
+
+### Worker node cost optimization (Spot)
+
+`infra/terraform.tfvars` uses a mixed-capacity node group pattern by default:
+
+- `default`: small On-Demand baseline for core/critical workloads.
+- `spot`: diversified Spot node group for cost-efficient scale-out.
+
+The `spot` node group also includes:
+
+- label: `workload_tier=spot`
+- taint: `workload-tier=spot:NoSchedule`
+
+This keeps general workloads on On-Demand unless they explicitly opt into Spot scheduling.
+
+Example workload manifest (node selector + toleration):
+
+```bash
+kubectl apply -f examples/scheduling/deployment-spot-example.yaml
+```
+
+Critical workload example pinned to On-Demand nodes:
+
+```bash
+kubectl apply -f examples/scheduling/deployment-ondemand-example.yaml
+```
+
+See `examples/scheduling/README.md` for guidance on when to use each pattern and how to verify pod placement.
+
+That guide also includes a one-liner to print pod -> node -> capacity type for quick Spot vs On-Demand verification.
+
+Tune `min_size`, `desired_size`, `max_size`, and `instance_types` in `eks_managed_node_groups` to match your workload and interruption tolerance.
+
+### EKS access entries (team access)
+
+The cluster currently supports creator-admin access, but team access should be managed with EKS access entries instead of editing `aws-auth` directly.
+
+`infra/terraform.tfvars` includes:
+
+- `enable_cluster_creator_admin_permissions` (default `true`)
+- `eks_access_entries` (default `{}` with example block)
+
+To grant additional IAM role/user access:
+
+1. Add entries in `eks_access_entries` with `principal_arn` and `policy_associations`.
+2. Optionally set `enable_cluster_creator_admin_permissions = false` once team access entries are in place.
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Example (`cluster admin` + `namespace read-only`):
+
+```hcl
+eks_access_entries = {
+	admin_role = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/PlatformAdmin"
+		policy_associations = {
+			admin = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+				access_scope = {
+					type = "cluster"
+				}
+			}
+		}
+	}
+
+	readonly_dev_ns = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/AppTeamReadOnly"
+		policy_associations = {
+			view_dev = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+				access_scope = {
+					type       = "namespace"
+					namespaces = ["dev"]
+				}
+			}
+		}
+	}
+
+	readonly_staging_ns = {
+		principal_arn = "arn:aws:iam::<ACCOUNT_ID>:role/AppTeamReadOnly"
+		policy_associations = {
+			view_staging = {
+				policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+				access_scope = {
+					type       = "namespace"
+					namespaces = ["staging"]
+				}
+			}
+		}
+	}
+}
+```
+
+### External Secrets Operator (AWS Secrets Manager / SSM)
+
+Use `helm_releases` to deploy External Secrets Operator with IRSA.
+
+`infra/terraform.tfvars` includes an `external_secrets` example block (disabled by default with `create=false`).
+
+To enable it:
+
+1. Set `helm_releases.external_secrets.create = true` in `infra/terraform.tfvars`.
+2. Set `irsa_policy_arns` to least-privilege custom policy ARNs scoped to only the Secrets Manager secrets and SSM parameter paths ESO should read.
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+After the chart is installed, create your `ClusterSecretStore` / `SecretStore` and `ExternalSecret` Kubernetes resources to sync values into native Kubernetes `Secret` objects.
+
+If you do **not** have External Secrets Operator installed yet, starter manifests will not reconcile until ESO is deployed.
+
+Starter manifests live under `examples/external-secrets/`:
+
+- Use `ClusterSecretStore` for shared platform stores.
+- Use namespace-scoped `SecretStore` for tighter tenant isolation.
+- AWS Secrets Manager, AWS SSM Parameter Store, and HashiCorp Vault variants are all included.
+
+Quick starts (after editing placeholders like region/path/URL):
+
+```bash
+# AWS Secrets Manager (cluster-scoped)
+kubectl apply -f examples/external-secrets/clustersecretstore-aws-secretsmanager.yaml
+kubectl apply -f examples/external-secrets/externalsecret-example.yaml
+
+# AWS SSM Parameter Store (namespace-scoped example)
+kubectl apply -f examples/external-secrets/secretstore-aws-parameterstore.yaml
+kubectl apply -f examples/external-secrets/externalsecret-ssm-secretstore.yaml
+
+# HashiCorp Vault (cluster-scoped example)
+kubectl apply -f examples/external-secrets/clustersecretstore-vault.yaml
+kubectl apply -f examples/external-secrets/externalsecret-vault-clusterstore-example.yaml
+```
+
+For the full matrix of files and usage patterns, see `examples/external-secrets/README.md`.
+
+### Log aggregation (Fluent Bit)
+
+`kube-prometheus-stack` covers metrics/alerts, but not cluster log shipping. Pair it with Fluent Bit.
+
+`infra/terraform.tfvars` includes a `helm_releases.fluent_bit` example (disabled by default with `create=false`) using the AWS `aws-for-fluent-bit` Helm chart and IRSA.
+
+To enable it:
+
+1. Set `helm_releases.fluent_bit.create = true` in `infra/terraform.tfvars`.
+2. Keep `enable_fluent_bit_cloudwatch_policy = true` to have Terraform manage a least-privilege CloudWatch Logs policy and attach it to Fluent Bit IRSA automatically.
+3. Update destination values (CloudWatch shown by default) and optionally set `fluent_bit_cloudwatch_log_group_name`.
+4. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Starter values are included in:
+
+- `examples/fluent-bit/values-cloudwatch.yaml`
+- `examples/fluent-bit/values-s3.yaml`
+- `examples/fluent-bit/values-opensearch.yaml`
+
+IAM policy templates are included in:
+
+- `examples/fluent-bit/policies/cloudwatch-logs-write-policy.json`
+- `examples/fluent-bit/policies/s3-write-policy.json`
+- `examples/fluent-bit/policies/opensearch-write-policy.json`
+
+For S3/OpenSearch, keep the same Helm + IRSA pattern and replace destination output values plus IAM permissions.
+
+See `examples/fluent-bit/README.md` for full setup notes.
+
+### Persistent storage (EBS + EFS)
+
+EBS and EFS are common EKS storage add-ons for PV/PVC workloads:
+
+- EBS CSI is already enabled via `eks_addons.aws-ebs-csi-driver` in `infra/terraform.tfvars`.
+- EFS CSI starter is available via `helm_releases.efs_csi` in `infra/terraform.tfvars` (disabled by default).
+
+To enable EFS CSI:
+
+1. Set `helm_releases.efs_csi.create = true` in `infra/terraform.tfvars`.
+2. Enable Terraform-managed EFS infrastructure in `infra/terraform.tfvars` by setting `enable_efs_filesystem = true` (or use an existing EFS filesystem).
+3. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+StorageClass/PVC starter manifests are included in `examples/storage/`:
+
+- `storageclass-ebs-gp3.yaml` + `pvc-ebs-example.yaml`
+- `storageclass-efs.yaml` + `pvc-efs-example.yaml`
+
+For EFS, render/apply `storageclass-efs.yaml` with an explicit filesystem ID:
+
+```bash
+EFS_FILE_SYSTEM_ID="$(terraform -chdir=infra output -raw efs_file_system_id)" envsubst < examples/storage/storageclass-efs.yaml | kubectl apply -f -
+kubectl apply -f examples/storage/pvc-efs-example.yaml
+```
+
+See `examples/storage/README.md` for usage and verification commands.
+
+### Backup / DR (Velero)
+
+Velero provides backup/restore for Kubernetes objects and PV snapshots to AWS, which helps recover from accidental namespace deletion or failed stateful rollouts.
+
+`infra/terraform.tfvars` includes a `helm_releases.velero` example (disabled by default with `create=false`) using Helm + IRSA.
+
+To enable it:
+
+1. Set `helm_releases.velero.create = true` in `infra/terraform.tfvars`.
+2. Configure backup bucket/region and snapshot location in Velero values.
+3. Set `irsa_policy_arns` to your Velero least-privilege policy ARN.
+4. Apply Terraform:
+
+```bash
+mise run terraform:apply
+```
+
+Starter files are in `examples/velero/`:
+
+- `values-aws-s3-ebs.yaml`
+- `schedule-daily.yaml`
+- `restore-latest-from-schedule.sh`
+- `policies/velero-s3-ebs-snapshots-policy.json`
+
+See `examples/velero/README.md` for setup, policy rendering, and restore workflow.
 
 Template baseline note:
 
@@ -158,7 +431,7 @@ Set these GitHub repository or environment variables before running deploy/destr
 - `TF_STATE_PREFIX` (optional): Prefix under the bucket. Defaults to GitHub repository name.
 - `AWS_ROLE_TO_ASSUME` (required): IAM role ARN for OIDC auth.
 
-For this repository, set `TF_STATE_BUCKET=tfstate-llewandowski`.
+Set `TF_STATE_BUCKET` in your `.env` file (see `.env.example`).
 
 Locking is configured with S3 native lockfiles (`use_lockfile=true`), so no DynamoDB table is required.
 
@@ -178,8 +451,50 @@ Where `<prefix>` is `TF_STATE_PREFIX` if set, otherwise the GitHub repo name (fo
 For local `mise run terraform:init`:
 
 - Init always configures the S3 backend.
-- Defaults are set in `mise.toml` (`TF_STATE_BUCKET=tfstate-llewandowski`, `TF_STATE_PREFIX=terraform-labs`, `TF_STATE_ENV=dev`).
+- Defaults are set in `mise.toml` (TF_STATE_BUCKET comes from your `.env`; TF_STATE_PREFIX=terraform-labs; TF_STATE_ENV=dev).
 - Override `TF_STATE_PREFIX` or `TF_STATE_ENV` per workspace/environment as needed.
+
+### Architecture
+
+See [docs/architecture.md](docs/architecture.md) for the module dependency diagram and layer responsibilities.
+
+### Module design
+
+This repo uses thin wrapper modules around community `terraform-aws-modules/*`
+packages. The wrappers add input validation, security-hardened defaults, and a
+consistent interface — see [docs/architecture.md](docs/architecture.md) for the
+full rationale. The general rule: wrap when you add guardrails, call upstream
+directly when you don't.
+
+### Production hardening checklist
+
+Before deploying to staging or production:
+
+1. Set `endpoint_public_access = false` (already the default) or restrict with `cluster_endpoint_public_access_cidrs`
+2. Set `single_nat_gateway = false` and `one_nat_gateway_per_az = true`
+3. Set `enable_cluster_creator_admin_permissions = false` and configure `eks_access_entries` for team access
+4. Verify `cluster_enabled_log_types` includes all 5 log types (default)
+5. Verify `create_kms_key = true` for secrets encryption at rest (default)
+6. Review node group instance types and sizes for production workloads
+7. Enable Velero backups (`helm_releases.velero.create = true`)
+8. Enable Fluent Bit log shipping (`helm_releases.fluent_bit.create = true`)
+9. Use `infra/prod.tfvars.example` as your starting template
+
+### Estimated monthly cost (us-east-1)
+
+| Component | Dev (defaults) | Prod (HA) |
+|-----------|---------------|-----------|
+| EKS control plane | $73 | $73 |
+| NAT Gateway (1 vs 3) | $32 + data | $96 + data |
+| t3.medium On-Demand (1) | $30 | $30 |
+| t3.medium Spot (2) | ~$18 | ~$18 |
+| CloudWatch Logs (control plane) | $5-15 | $5-15 |
+| KMS key | $1 | $1 |
+| EBS gp3 (default 20GB per node) | $5 | $15 |
+| ALB (if LoadBalancer created) | $16 + LCU | $16 + LCU |
+| **Approximate total** | **~$180-200** | **~$270-300** |
+
+Costs exclude data transfer, EFS, Route 53, and additional workload-specific resources. Spot savings are typically 60-80% vs On-Demand. Use [AWS Pricing Calculator](https://calculator.aws/) for exact estimates.
 
 ### Template bootstrap for new repos
 
@@ -189,7 +504,7 @@ Use the bootstrap script to configure AWS OIDC trust + GitHub environments/varia
 ./scripts/bootstrap-template-repo.sh \
 	--repo <owner/new-repo> \
 	--aws-profile dev \
-	--state-bucket tfstate-llewandowski
+	--state-bucket <YOUR_STATE_BUCKET>
 ```
 
 Defaults:
@@ -199,11 +514,3 @@ Defaults:
 - State prefix: repository name
 
 After bootstrap, run the `Deploy (Terraform Apply)` workflow manually with `environment=dev` and `confirm=APPLY`.
-
-### Re-enable strict TFLint rules
-
-Re-enable these rules in `.tflint.hcl` when the scaffold grows into real infrastructure:
-
-- `terraform_unused_declarations`: re-enable once locals/variables are actively consumed by resources or modules.
-- `terraform_unused_required_providers`: re-enable once `required_providers` only lists providers used in code.
-- Run `mise run check` after re-enabling to verify no regressions.
