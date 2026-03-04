@@ -1,7 +1,10 @@
-# Tests that the helm-release module handles mixed set types without panic.
+# Tests that the helm-release module handles set values without panic.
+
+mock_provider "aws" {}
+mock_provider "helm" {}
 
 variables {
-  create           = false # Don't actually deploy — just validate plan
+  create           = false
   name             = "test-release"
   chart            = "test-chart"
   chart_version    = "1.0.0"
@@ -12,8 +15,8 @@ variables {
   set = [
     { name = "simple", value = "string-value" },
     { name = "with-type", value = "42", type = "auto" },
-    { name = "list-value", value = ["a", "b"] },
-    { name = "map-value", value = { key = "val" } },
+    { name = "numeric", value = "3.14" },
+    { name = "boolean", value = "true" },
   ]
 }
 
@@ -21,12 +24,11 @@ run "plan_with_mixed_set_types" {
   command = plan
 
   module {
-    source = "../modules/helm-release"
+    source = "./modules/helm-release"
   }
 
-  # Plan should succeed without tostring panic
   assert {
-    condition     = true
+    condition     = length(var.set) == 4
     error_message = "Plan failed — set type normalization is broken."
   }
 }

@@ -13,7 +13,7 @@ run "verify_efs_secure_defaults" {
   command = plan
 
   module {
-    source = "../modules/efs"
+    source = "./modules/efs"
   }
 
   assert {

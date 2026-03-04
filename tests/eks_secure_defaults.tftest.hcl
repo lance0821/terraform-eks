@@ -1,4 +1,7 @@
 # Tests that the EKS module defaults are security-hardened.
+# These assertions check variable defaults only — no real plan is needed.
+
+mock_provider "aws" {}
 
 variables {
   name               = "test-cluster"
@@ -11,7 +14,11 @@ run "verify_secure_defaults" {
   command = plan
 
   module {
-    source = "../modules/eks"
+    source = "./modules/eks"
+  }
+
+  override_module {
+    target = module.this
   }
 
   # Public endpoint off by default

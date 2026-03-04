@@ -1,5 +1,8 @@
 # Tests that IRSA-enabled releases produce homogeneous set objects.
 
+mock_provider "aws" {}
+mock_provider "helm" {}
+
 variables {
   create                    = false
   name                      = "test-irsa"
@@ -22,12 +25,16 @@ run "plan_irsa_with_custom_set" {
   command = plan
 
   module {
-    source = "../modules/helm-release"
+    source = "./modules/helm-release"
   }
 
-  # Plan succeeds = irsa_set + normalized_set concat didn't fail type unification
   assert {
-    condition     = true
+    condition     = var.create_irsa_role == true
+    error_message = "Plan failed — create_irsa_role should be true."
+  }
+
+  assert {
+    condition     = length(var.set) == 1
     error_message = "Plan failed — irsa_set and normalized_set have incompatible object shapes."
   }
 }
