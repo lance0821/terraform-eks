@@ -18,7 +18,7 @@ This starter adds Velero for Kubernetes object backups and PV snapshots to AWS.
 4. Apply:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 ## Render IAM policy template

@@ -79,4 +79,4 @@ jobs:
         run: terraform -chdir=infra plan -destroy -input=false -no-color -out=tfplan
 
       - name: Terraform Destroy
-        run: terraform -chdir=infra destroy -input=false -no-color tfplan
+        run: terraform -chdir=infra apply -input=false -auto-approve -no-color tfplan
