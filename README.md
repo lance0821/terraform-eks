@@ -130,23 +130,20 @@ mise exec aws-cli -- aws configure
 Run tasks defined in `mise.toml`:
 
 ```bash
-mise run terraform:init
-mise run terraform:plan
-mise run terraform:apply
-mise run kubeconfig:update
-mise run kubeconfig:whoami
-mise run kubeconfig:placement
-mise run terraform:destroy
-mise run terraform:validate
-mise run terraform:validate-ci
-mise run terraform:fmt
-mise run checkov:scan
-mise run checkov:scan-all
+mise run tf:init
+mise run tf:plan
+mise run tf:apply
+mise run kube:config
+mise run kube:whoami
+mise run kube:placement
+mise run tf:destroy
+mise run tf:validate
+mise run tf:fmt
+mise run checkov
 mise run check
-mise run check:ci
 ```
 
-`check:ci` runs several tasks in parallel. The `tflint:modules` task runs `terraform init` inside each module directory so TFLint can resolve module sources from that module's local `.terraform` state.
+`lint` initializes each module directory before running TFLint so module sources resolve from local `.terraform` state.
 
 If running Terraform directly (outside `mise run`), ensure the SSO profile is explicit.
 
@@ -156,7 +153,7 @@ For provider/module initialization only (no backend):
 AWS_PROFILE=dev terraform -chdir=infra init -upgrade -backend=false
 ```
 
-To initialize with the S3 backend (equivalent to `mise run terraform:init`), pass backend config explicitly:
+To initialize with the S3 backend (equivalent to `mise run tf:init`), pass backend config explicitly:
 
 ```bash
 AWS_PROFILE=dev terraform -chdir=infra init -reconfigure -upgrade \
@@ -223,7 +220,7 @@ To grant additional IAM role/user access:
 3. Apply Terraform:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 Example (`cluster admin` + `namespace read-only`):
@@ -283,7 +280,7 @@ To enable it:
 3. Apply Terraform:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 After the chart is installed, create your `ClusterSecretStore` / `SecretStore` and `ExternalSecret` Kubernetes resources to sync values into native Kubernetes `Secret` objects.
@@ -328,7 +325,7 @@ To enable it:
 4. Apply Terraform:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 Starter values are included in:
@@ -361,7 +358,7 @@ To enable EFS CSI:
 3. Apply Terraform:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 StorageClass/PVC starter manifests are included in `examples/storage/`:
@@ -392,7 +389,7 @@ To enable it:
 4. Apply Terraform:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 Starter files are in `examples/velero/`:
@@ -448,7 +445,7 @@ State key path is set by prefix + workflow input environment:
 
 Where `<prefix>` is `TF_STATE_PREFIX` if set, otherwise the GitHub repo name (for example `terraform-eks`).
 
-For local `mise run terraform:init`:
+For local `mise run tf:init`:
 
 - Init always configures the S3 backend.
 - Defaults are set in `mise.toml` (TF_STATE_BUCKET comes from your `.env`; TF_STATE_PREFIX=terraform-labs; TF_STATE_ENV=dev).

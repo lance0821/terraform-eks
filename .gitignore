@@ -15,7 +15,6 @@ tfplan
 
 *.sarif
 *.sarif/
-trivy.sarif
 checkov.sarif
 checkov.sarif/
 checkov-all.sarif

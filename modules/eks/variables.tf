@@ -7,6 +7,12 @@ variable "name" {
   }
 }
 
+variable "create" {
+  description = "Controls whether cluster resources are created. Useful for validation-only plans and tests."
+  type        = bool
+  default     = true
+}
+
 variable "kubernetes_version" {
   description = "Kubernetes version for the EKS control plane (for example 1.31)."
   type        = string

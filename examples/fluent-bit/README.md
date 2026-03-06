@@ -19,7 +19,7 @@ This starter pairs with `kube-prometheus-stack` by adding cluster log shipping v
 5. Apply:
 
 ```bash
-mise run terraform:apply
+mise run tf:apply
 ```
 
 ## IAM policy templates

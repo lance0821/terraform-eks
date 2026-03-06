@@ -3,7 +3,14 @@
 
 mock_provider "aws" {}
 
+mock_provider "aws" {}
+mock_provider "cloudinit" {}
+mock_provider "null" {}
+mock_provider "time" {}
+mock_provider "tls" {}
+
 variables {
+  create             = false
   name               = "test-cluster"
   kubernetes_version = "1.31"
   vpc_id             = "vpc-fake123"

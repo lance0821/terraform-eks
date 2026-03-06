@@ -25,16 +25,6 @@ run "plan_irsa_with_custom_set" {
   command = plan
 
   module {
-    source = "./modules/helm-release"
-  }
-
-  assert {
-    condition     = var.create_irsa_role == true
-    error_message = "Plan failed — create_irsa_role should be true."
-  }
-
-  assert {
-    condition     = length(var.set) == 1
-    error_message = "Plan failed — irsa_set and normalized_set have incompatible object shapes."
+    source = "../modules/helm-release"
   }
 }

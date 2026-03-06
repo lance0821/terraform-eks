@@ -17,9 +17,8 @@ This module composes reusable `../helm-release` modules to install:
 ## Requirements
 
 - Terraform `>= 1.12.0, < 2.0.0`
-- Providers:
-  - `hashicorp/helm ~> 3.1`
-  - `hashicorp/aws ~> 6.34.0`
+- No direct provider requirements are declared in this module; providers are
+  consumed by the composed child modules.
 
 ## Usage
 

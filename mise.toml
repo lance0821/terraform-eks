@@ -49,17 +49,16 @@ TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache terraform -chdir=${TF_DIR} init -i
 
 [tasks."tf:plan"]
 description = "Plan (saves to tfplan)"
-depends     = ["tf:init"]
 run         = "terraform -chdir=${TF_DIR} plan -input=false -out=tfplan"
 
 [tasks."tf:apply"]
 description = "Apply saved plan"
-depends     = ["tf:plan"]
+
 run         = "terraform -chdir=${TF_DIR} apply -input=false tfplan"
 
 [tasks."tf:destroy"]
 description = "Destroy infrastructure"
-depends     = ["tf:init"]
+
 run         = "terraform -chdir=${TF_DIR} destroy -input=false"
 
 [tasks."tf:fmt"]
@@ -79,18 +78,14 @@ terraform -chdir=${TF_DIR} validate
 """
 
 [tasks."tf:test"]
-description = "Run Terraform tests (from repo root)"
+description = "Run Terraform tests (from tests/)"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
 mkdir -p .terraform.d/plugin-cache
-for d in modules/*/; do
-  if ls "$d"/*.tf >/dev/null 2>&1; then
-    TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
-      terraform -chdir="$d" init -backend=false -input=false -lockfile=readonly >/dev/null
-  fi
-done
-terraform test
+TF_PLUGIN_CACHE_DIR=.terraform.d/plugin-cache \
+  terraform -chdir=tests init -backend=false -input=false -lockfile=readonly >/dev/null
+terraform -chdir=tests test
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -137,7 +132,6 @@ depends     = ["tf:fmt-check", "tf:validate", "lint", "checkov", "gitleaks"]
 
 [tasks."kube:config"]
 description = "Update kubeconfig for the EKS cluster"
-depends     = ["tf:init"]
 run         = 'aws eks update-kubeconfig --region ${AWS_REGION} --name "$(terraform -chdir=${TF_DIR} output -raw cluster_name)"'
 
 [tasks."kube:whoami"]

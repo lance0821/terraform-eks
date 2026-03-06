@@ -1,5 +1,7 @@
 # Tests EFS module defaults and validation.
 
+mock_provider "aws" {}
+
 variables {
   create                     = false
   name                       = "test-efs"
