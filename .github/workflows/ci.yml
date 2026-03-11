@@ -28,7 +28,7 @@ jobs:
           egress-policy: audit
 
       - name: Setup mise
-        uses: jdx/mise-action@v3.6.1
+        uses: jdx/mise-action@v3.6.3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
