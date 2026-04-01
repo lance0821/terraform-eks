@@ -56,7 +56,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6.0.2
       - name: Lint workflows
-        uses: rhysd/actionlint@v1.7.11
+        uses: rhysd/actionlint@v1.7.12
 
   zizmor:
     runs-on: ubuntu-24.04
